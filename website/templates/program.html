@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Programs{% endblock %}
+
+{% block content %}
+<h1>Program Management</h1>
+<button id="addProgramButton" onclick="toggleForm()">Add Program</button>
+
+<div id="formModal" class="modal hidden">
+    <div class="modal-content">
+        <span class="close" onclick="toggleForm()">&times;</span>
+        <form id="program-form" action="/add_program" method="post">
+            <label for="courseCode">Course Code:</label><br>
+            <input type="text" id="courseCode" name="courseCode" required><br>
+            <label for="courseTitle">Course Title:</label><br>
+            <input type="text" id="courseTitle" name="courseTitle" required><br>
+
+            <label for="collegeCode">Select College:</label><br>
+            <select id="collegeCode" name="collegeCode" required>
+                <option value="">Select a college</option>
+                {% for college in colleges %}
+                <option value="{{ college[0] }}">{{ college[0] }} - {{ college[1] }}</option>
+                {% endfor %}
+            </select><br>
+
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+</div>
+
+<!-- Program Table -->
+<table border="1" cellpadding="10">
+    <thead>
+        <tr>
+            <th>Course Code</th>
+            <th>Course Title</th>
+            <th>College</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for program in programs %}
+        <tr>
+            <td>{{ program['programCode'] }}</td>
+            <td>{{ program['programTitle'] }}</td>
+            <td>{{ program['programCollege'] }}</td>
+            <td>
+                <form action="/delete_program/{{ program['programCode'] }}" method="post" style="display:inline;">
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    function toggleForm() {
+        var modal = document.getElementById("formModal");
+        modal.classList.toggle("hidden");
+        modal.classList.toggle("show");
+    }
+</script>
+
+{% endblock %}
