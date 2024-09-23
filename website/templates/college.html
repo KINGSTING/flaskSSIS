@@ -4,17 +4,18 @@
 
 {% block content %}
 <h1>College Management</h1>
-<button id="addCollegeButton" onclick="toggleForm()">Add College</button>
+<button id="addCollegeButton" onclick="toggleForm('', '')">Add College</button>
 
 <div id="formModal" class="modal hidden">
     <div class="modal-content">
-        <span class="close" onclick="toggleForm()">&times;</span>
-        <form id="college-form" action="/add_college" method="post">
+        <span class="close" onclick="toggleForm('', '')">&times;</span>
+        <form id="college-form" action="/add_college" method="post" onsubmit="return confirmUpdate();">
+            <input type="hidden" id="originalCollegeCode" name="originalCollegeCode" value=""> <!-- To track the original collegeCode for updates -->
             <label for="collegeCode">College Code:</label><br>
             <input type="text" id="collegeCode" name="collegeCode" required><br>
             <label for="collegeName">College Name:</label><br>
             <input type="text" id="collegeName" name="collegeName" required><br>
-            <button type="submit">Submit</button>
+            <button type="submit" id="submitBtn">Submit</button>
         </form>
     </div>
 </div>
@@ -25,6 +26,7 @@
         <tr>
             <th>College Code</th>
             <th>College Name</th>
+            <th>Action</th>
         </tr>
     </thead>
     <tbody>
@@ -32,16 +34,53 @@
         <tr>
             <td>{{ college['collegeCode'] }}</td>
             <td>{{ college['collegeName'] }}</td>
+            <td>
+                <button onclick="toggleForm('{{ college['collegeCode'] }}', '{{ college['collegeName'] }}')">Edit</button>
+                <form action="/delete_college/{{ college['collegeCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
 <script>
-    function toggleForm() {
+    function toggleForm(collegeCode, collegeName) {
         var modal = document.getElementById("formModal");
+        var originalCollegeCodeInput = document.getElementById("originalCollegeCode");
+        var codeInput = document.getElementById("collegeCode");
+        var nameInput = document.getElementById("collegeName");
+        var submitBtn = document.getElementById("submitBtn");
+
+        if (collegeCode && collegeName) {
+            // Editing mode
+            originalCollegeCodeInput.value = collegeCode; // Store the original code for updates
+            codeInput.value = collegeCode;
+            nameInput.value = collegeName;
+            submitBtn.textContent = "Update";
+            document.getElementById("college-form").action = "/edit_college/" + collegeCode;
+            document.getElementById("college-form").onsubmit = confirmUpdate;
+        } else {
+            // Adding mode
+            originalCollegeCodeInput.value = ""; // Clear the original code
+            codeInput.value = "";
+            nameInput.value = "";
+            submitBtn.textContent = "Submit";
+            document.getElementById("college-form").action = "/add_college";
+            document.getElementById("college-form").onsubmit = null; // No confirmation needed for add
+        }
+
         modal.classList.toggle("hidden");
         modal.classList.toggle("show");
+    }
+
+    function confirmDelete() {
+        return confirm("Are you sure you want to delete this college?");
+    }
+
+    function confirmUpdate() {
+        return confirm("Are you sure you want to update this college?");
     }
 </script>
 

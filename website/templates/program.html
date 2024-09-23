@@ -4,12 +4,13 @@
 
 {% block content %}
 <h1>Program Management</h1>
-<button id="addProgramButton" onclick="toggleForm()">Add Program</button>
+<button id="addProgramButton" onclick="toggleForm('', '', '')">Add Program</button>
 
 <div id="formModal" class="modal hidden">
     <div class="modal-content">
-        <span class="close" onclick="toggleForm()">&times;</span>
-        <form id="program-form" action="/add_program" method="post">
+        <span class="close" onclick="toggleForm('', '', '')">&times;</span>
+        <form id="program-form" action="/add_program" method="post" onsubmit="return confirmUpdate();">
+            <input type="hidden" id="originalProgramCode" name="originalProgramCode" value=""> <!-- To track the original programCode for updates -->
             <label for="courseCode">Course Code:</label><br>
             <input type="text" id="courseCode" name="courseCode" required><br>
             <label for="courseTitle">Course Title:</label><br>
@@ -23,7 +24,7 @@
                 {% endfor %}
             </select><br>
 
-            <button type="submit">Submit</button>
+            <button type="submit" id="submitBtn">Submit</button>
         </form>
     </div>
 </div>
@@ -45,7 +46,8 @@
             <td>{{ program['programTitle'] }}</td>
             <td>{{ program['programCollege'] }}</td>
             <td>
-                <form action="/delete_program/{{ program['programCode'] }}" method="post" style="display:inline;">
+                <button onclick="toggleForm('{{ program['programCode'] }}', '{{ program['programTitle'] }}', '{{ program['programCollege'] }}')">Edit</button>
+                <form action="/delete_program/{{ program['programCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
                     <button type="submit">Delete</button>
                 </form>
             </td>
@@ -55,10 +57,53 @@
 </table>
 
 <script>
-    function toggleForm() {
+    function toggleForm(programCode, programTitle, collegeCode) {
         var modal = document.getElementById("formModal");
+        var originalProgramCodeInput = document.getElementById("originalProgramCode");
+        var codeInput = document.getElementById("courseCode");
+        var titleInput = document.getElementById("courseTitle");
+        var collegeSelect = document.getElementById("collegeCode");
+        var submitBtn = document.getElementById("submitBtn");
+
+        if (programCode && programTitle) {
+            // Editing mode
+            originalProgramCodeInput.value = programCode; // Store the original code for updates
+            codeInput.value = programCode;
+            titleInput.value = programTitle;
+
+            // Set the selected college
+            for (var i = 0; i < collegeSelect.options.length; i++) {
+                if (collegeSelect.options[i].value === collegeCode) {
+                    collegeSelect.selectedIndex = i;
+                    break;
+                }
+            }
+
+            submitBtn.textContent = "Update";
+            document.getElementById("program-form").action = "/edit_program/" + programCode;
+            document.getElementById("program-form").onsubmit = confirmUpdate;
+        } else {
+            // Adding mode
+            originalProgramCodeInput.value = ""; // Clear the original code
+            codeInput.value = "";
+            titleInput.value = "";
+            collegeSelect.selectedIndex = 0; // Reset to the first option
+
+            submitBtn.textContent = "Submit";
+            document.getElementById("program-form").action = "/add_program";
+            document.getElementById("program-form").onsubmit = null; // No confirmation needed for add
+        }
+
         modal.classList.toggle("hidden");
         modal.classList.toggle("show");
+    }
+
+    function confirmDelete() {
+        return confirm("Are you sure you want to delete this program?");
+    }
+
+    function confirmUpdate() {
+        return confirm("Are you sure you want to update this program?");
     }
 </script>
 
