@@ -54,8 +54,9 @@
 <div id="editModal" class="modal hidden">
     <div class="modal-content">
         <span class="close" onclick="toggleEditForm()">&times;</span>
-        <form id="edit-student-form" action="/edit_student" method="post" onsubmit="return confirmUpdate();">
-            <input type="hidden" id="editIdNumber" name="idNumber">
+        <form id="edit-student-form" action="" method="post" onsubmit="return confirmUpdate();">
+             <label for="editIdNumber">Id Number:</label><br>
+            <input type="text" id="editIdNumber" name="idNumber">
             <label for="editFirstName">First Name:</label><br>
             <input type="text" id="editFirstName" name="firstName" required><br>
             <label for="editLastName">Last Name:</label><br>
@@ -88,6 +89,7 @@
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
             </select><br>
+            <br>
             <button type="submit">Update</button>
         </form>
     </div>
@@ -161,8 +163,12 @@
         document.getElementById("editYear").value = year;
         document.getElementById("editGender").value = gender;
 
+        // Dynamically update the form action to include the correct idNumber
+        document.getElementById("edit-student-form").action = `/edit_student/${idNumber}`;
+
         toggleEditForm();  // Show the edit form
     }
+
 
 
     function confirmDelete() {

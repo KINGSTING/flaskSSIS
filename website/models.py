@@ -30,25 +30,17 @@ class Students:
         cursor.close()
         return students
 
-    @staticmethod
-    def find_by_name(db_connection, name):
-        cursor = db_connection.cursor()
-        cursor.execute('SELECT * FROM student WHERE firstName = ?', (name,))
-        row = cursor.fetchone()
-        cursor.close()
-        return Students(*row) if row else None  # Return an instance if found
-
-    def update_student(self, new_firstName, new_gender, new_courseCode, new_year):
+    def update_student(self, new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, new_status):
         cursor = self.db.cursor()
         cursor.execute("""
             UPDATE student 
-            SET firstName = ?, Gender = ?, CourseCode = ?, Year = ? 
+            SET idNumber = ?, firstName = ?, lastName = ?, courseCode = ?, year = ?, gender = ?, status = ?
             WHERE IDNumber = ?""",
-                       (new_firstName, new_gender, new_courseCode, new_year, self.idNumber))
+                       (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, new_status, self.idNumber))
         self.db.commit()
         cursor.close()
 
-    def delete(self):
+    def delete_student(self):
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM student WHERE IDNumber = ?', (self.idNumber,))
         self.db.commit()
@@ -61,6 +53,31 @@ class Students:
         row = cursor.fetchone()
         cursor.close()
         return Students(*row) if row else None  # Return an instance if found
+
+    def set_status_based_on_program(self, conn):
+        cursor = conn.cursor()
+
+        # Check if the programCode exists in the Programs table
+        cursor.execute("SELECT * FROM program WHERE programCode = ?", (self.courseCode,))
+        program = cursor.fetchone()
+
+        if program:
+            # If program exists, set status to 'Enrolled'
+            self.status = "Enrolled"
+        else:
+            # If program does not exist, set status to 'Unenrolled'
+            self.status = "Unenrolled"
+
+        # Commit status change to the database
+        cursor.execute("""
+            UPDATE student
+            SET Status = ?
+            WHERE IDNumber = ?
+        """, (self.status, self.idNumber))
+        conn.commit()
+
+        # Return the updated status
+        return self.status
 
 
 class Programs:

@@ -68,7 +68,7 @@ def add_student():
 def delete_student(idNumber):
     # Find and delete the student by ID number
     student = Students(idNumber, None, None, None, None, None, None)
-    student.delete()
+    student.delete_student()
     return redirect('/students')
 
 
@@ -77,30 +77,52 @@ def edit_student(idNumber):
     conn = get_db_connection()
 
     if request.method == 'POST':
+        # Fetch the updated values from the form
+        new_idNumber = request.form.get("idNumber")
         new_firstName = request.form.get("firstName")
         new_lastName = request.form.get("lastName")
         new_courseCode = request.form.get("courseCode")
         new_year = request.form.get("year")
         new_gender = request.form.get("gender")
-        new_status = request.form.get("status")
+
+        # Log updated values
+        print(f"Updated values: IDNumber={new_idNumber}, FirstName={new_firstName}, LastName={new_lastName}")
 
         # Fetch the student as an instance of Students
+        print(f"ID passed to find_by_id: {idNumber}")
         student = Students.find_by_id(conn, idNumber)
+
+        print(f"Fetched student: {student}")
 
         if student:
             # Update the student using the instance method
-            student.update_student(new_firstName, new_lastName, new_courseCode, new_year, new_gender, new_status)
+            print("hapit na mo work")
+            new_status = student.set_status_based_on_program(conn)
+            student.update_student(new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender,
+                                   new_status)
+            conn.commit()  # Save changes to the database
+            print("It was a success")
+        else:
+            print(f"No student found with ID: {idNumber}")
 
         conn.close()
 
+        # Redirect back to the student list page after editing
         return redirect('/students')
 
-    # Fetch the current student details for editing if GET request
+    # If it's a GET request, fetch the current student details for editing
     student = Students.find_by_id(conn, idNumber)
+
+    if not student:
+        # If student not found, redirect to the student list
+        print(f"No student found with ID: {idNumber}")
+        conn.close()
+        return redirect('/students')
+
     conn.close()
 
+    # Render the edit form with current student details
     return render_template('edit_student.html', student=student)
-
 
 
 @views.route('/add_program', methods=['GET', 'POST'])
