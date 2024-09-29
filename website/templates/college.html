@@ -4,6 +4,20 @@
 
 {% block content %}
 <h1>College Management</h1>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div>
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
 <button id="addCollegeButton" onclick="toggleForm('', '')">Add College</button>
 
 <div id="formModal" class="modal hidden">

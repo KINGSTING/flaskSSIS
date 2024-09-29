@@ -4,13 +4,27 @@
 
 {% block content %}
 <h1>Program Management</h1>
+
+<!-- Flash Messages Section -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div id="flash-messages">
+      {% for category, message in messages %}
+        <div class="alert {{ category }}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
 <button id="addProgramButton" onclick="toggleForm('', '', '')">Add Program</button>
 
 <div id="formModal" class="modal hidden">
     <div class="modal-content">
         <span class="close" onclick="toggleForm('', '', '')">&times;</span>
         <form id="program-form" action="/add_program" method="post" onsubmit="return confirmUpdate();">
-            <input type="hidden" id="originalProgramCode" name="originalProgramCode" value=""> <!-- To track the original programCode for updates -->
+            <input type="hidden" id="originalProgramCode" name="originalProgramCode" value="">
             <label for="courseCode">Course Code:</label><br>
             <input type="text" id="courseCode" name="courseCode" required><br>
             <label for="courseTitle">Course Title:</label><br>
@@ -66,12 +80,10 @@
         var submitBtn = document.getElementById("submitBtn");
 
         if (programCode && programTitle) {
-            // Editing mode
-            originalProgramCodeInput.value = programCode; // Store the original code for updates
+            originalProgramCodeInput.value = programCode;
             codeInput.value = programCode;
             titleInput.value = programTitle;
 
-            // Set the selected college
             for (var i = 0; i < collegeSelect.options.length; i++) {
                 if (collegeSelect.options[i].value === collegeCode) {
                     collegeSelect.selectedIndex = i;
@@ -83,15 +95,14 @@
             document.getElementById("program-form").action = "/edit_program/" + programCode;
             document.getElementById("program-form").onsubmit = confirmUpdate;
         } else {
-            // Adding mode
-            originalProgramCodeInput.value = ""; // Clear the original code
+            originalProgramCodeInput.value = "";
             codeInput.value = "";
             titleInput.value = "";
-            collegeSelect.selectedIndex = 0; // Reset to the first option
+            collegeSelect.selectedIndex = 0;
 
             submitBtn.textContent = "Submit";
             document.getElementById("program-form").action = "/add_program";
-            document.getElementById("program-form").onsubmit = null; // No confirmation needed for add
+            document.getElementById("program-form").onsubmit = null;
         }
 
         modal.classList.toggle("hidden");

@@ -29,16 +29,12 @@ def create_database(app):
             cursor = conn.cursor()
 
             # Create `student` table
+            # Create `college` table
+            # Create `college` table
             cursor.execute('''
-                CREATE TABLE IF NOT EXISTS student (
-                    IDNumber TEXT PRIMARY KEY,
-                    firstName TEXT NOT NULL,
-                    lastName TEXT NOT NULL,
-                    CourseCode TEXT NOT NULL,
-                    Status TEXT NOT NULL,
-                    Year TEXT NOT NULL,
-                    Gender TEXT NOT NULL,
-                    FOREIGN KEY (CourseCode) REFERENCES program(programCode)
+                CREATE TABLE IF NOT EXISTS college (
+                    collegeCode TEXT PRIMARY KEY,
+                    collegeName TEXT
                 )
             ''')
 
@@ -48,15 +44,21 @@ def create_database(app):
                     programCode TEXT PRIMARY KEY,
                     programTitle TEXT,
                     programCollege TEXT,
-                    FOREIGN KEY (programCollege) REFERENCES college(collegeCode)
+                    FOREIGN KEY (programCollege) REFERENCES college(collegeCode) ON DELETE CASCADE
                 )
             ''')
 
-            # Create `college` table
+            # Create `student` table
             cursor.execute('''
-                CREATE TABLE IF NOT EXISTS college (
-                    collegeCode TEXT PRIMARY KEY,
-                    collegeName TEXT
+                CREATE TABLE IF NOT EXISTS student (
+                    IDNumber TEXT PRIMARY KEY,
+                    firstName TEXT NOT NULL,
+                    lastName TEXT NOT NULL,
+                    CourseCode TEXT NOT NULL,
+                    Status TEXT NOT NULL,
+                    Year TEXT NOT NULL,
+                    Gender TEXT NOT NULL,
+                    FOREIGN KEY (CourseCode) REFERENCES program(programCode) 
                 )
             ''')
 

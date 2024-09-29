@@ -4,6 +4,18 @@
 
 {% block content %}
 <h1>Student Management</h1>
+
+<!-- Display Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <ul class="flashes">
+            {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
+
 <button id="addStudentButton" onclick="toggleForm()">Add Student</button>
 
 <!-- Add Student Modal -->
@@ -55,7 +67,7 @@
     <div class="modal-content">
         <span class="close" onclick="toggleEditForm()">&times;</span>
         <form id="edit-student-form" action="" method="post" onsubmit="return confirmUpdate();">
-             <label for="editIdNumber">Id Number:</label><br>
+            <label for="editIdNumber">Id Number:</label><br>
             <input type="text" id="editIdNumber" name="idNumber">
             <label for="editFirstName">First Name:</label><br>
             <input type="text" id="editFirstName" name="firstName" required><br>
@@ -102,7 +114,7 @@
             <th>ID Number</th>
             <th>First Name</th>
             <th>Last Name</th>
-            <th>Course Code</th>
+            <th>Program</th>
             <th>Year</th>
             <th>Gender</th>
             <th>Status</th>
@@ -168,8 +180,6 @@
 
         toggleEditForm();  // Show the edit form
     }
-
-
 
     function confirmDelete() {
         return confirm("Are you sure you want to delete this student?");
