@@ -20,6 +20,12 @@
 
 <button id="addCollegeButton" onclick="toggleForm('', '')">Add College</button>
 
+<form method="get" action="{{ url_for('views.search_college') }}">
+    <label for="searchCollege">Search by College Code:</label>
+    <input type="text" id="searchCollege" name="collegeCode" placeholder="Enter College Code" required>
+    <button type="submit">Search</button>
+</form>
+
 <div id="formModal" class="modal hidden">
     <div class="modal-content">
         <span class="close" onclick="toggleForm('', '')">&times;</span>
@@ -44,18 +50,31 @@
         </tr>
     </thead>
     <tbody>
-        {% for college in colleges %}
+        {% if search_result %}
         <tr>
-            <td>{{ college['collegeCode'] }}</td>
-            <td>{{ college['collegeName'] }}</td>
+            <td>{{ search_result['collegeCode'] }}</td>
+            <td>{{ search_result['collegeName'] }}</td>
             <td>
-                <button onclick="toggleForm('{{ college['collegeCode'] }}', '{{ college['collegeName'] }}')">Edit</button>
-                <form action="/delete_college/{{ college['collegeCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                <button onclick="toggleForm('{{ search_result['collegeCode'] }}', '{{ search_result['collegeName'] }}')">Edit</button>
+                <form action="/delete_college/{{ search_result['collegeCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
                     <button type="submit">Delete</button>
                 </form>
             </td>
         </tr>
-        {% endfor %}
+        {% else %}
+            {% for college in colleges %}
+            <tr>
+                <td>{{ college['collegeCode'] }}</td>
+                <td>{{ college['collegeName'] }}</td>
+                <td>
+                    <button onclick="toggleForm('{{ college['collegeCode'] }}', '{{ college['collegeName'] }}')">Edit</button>
+                    <form action="/delete_college/{{ college['collegeCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        {% endif %}
     </tbody>
 </table>
 

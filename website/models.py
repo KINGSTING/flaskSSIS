@@ -72,7 +72,19 @@ class Students:
         cursor.execute("SELECT * FROM student WHERE IDNumber = ?", (idNumber,))
         row = cursor.fetchone()
         cursor.close()
-        return Students(*row) if row else None  # Return an instance if found
+
+        if row:
+            # Return the data as a dictionary
+            return {
+                'IDNumber': row[0],
+                'firstName': row[1],
+                'lastName': row[2],
+                'CourseCode': row[3],
+                'Year': row[4],
+                'Gender': row[5],
+                'Status': row[6],
+            }
+        return None
 
     @staticmethod
     def check_and_update_status(conn, idNumber):
@@ -96,7 +108,14 @@ class Students:
                 print(f"Student ID {idNumber} status updated to 'Unenrolled'.")
                 return True  # Indicate that status was updated
 
-            print(f"Program code {course_code} exists. No status update required.")
+            else:
+                print(f"Program code {course_code} exists. Updating status to 'Enrolled'.")
+                # Update status to 'Enrolled' if the program exists
+                conn.execute("UPDATE student SET Status = 'Enrolled' WHERE IDNumber = ?", (idNumber,))
+                conn.commit()
+                print(f"Student ID {idNumber} status updated to 'Enrolled'.")
+                return True  # Indicate that status was updated
+
         else:
             print(f"Student ID {idNumber} not found.")
 
@@ -132,7 +151,15 @@ class Programs:
         cursor.execute('SELECT * FROM program WHERE programCode = ?', (programCode,))
         row = cursor.fetchone()
         cursor.close()
-        return Programs(*row) if row else None  # Return an instance if found
+
+        if row:
+            # Return the data as a dictionary
+            return {
+                'programCode': row[0],
+                'programTitle': row[1],
+                'programCollege': row[2],
+            }
+        return None
 
     def update_program(self, conn, new_programCode, new_programTitle, new_collegeCode):
         cursor = conn.cursor()
@@ -214,7 +241,14 @@ class Colleges:
         cursor.execute('SELECT * FROM college WHERE collegeCode = ?', (collegeCode,))
         row = cursor.fetchone()
         cursor.close()
-        return Colleges(*row) if row else None  # Return an instance if found
+
+        if row:
+            return {
+                'collegeCode': row[0],
+                'collegeName': row[1],
+                # Add other fields as necessary
+            }
+        return None
 
     @staticmethod
     def update_college(conn, originalCollegeCode, new_collegeCode, new_collegeName):
@@ -248,6 +282,3 @@ class Colleges:
         exists = cursor.fetchone()[0] > 0  # Returns True if exists, else False
         cursor.close()
         return exists
-
-        
-    

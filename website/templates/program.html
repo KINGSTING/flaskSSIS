@@ -20,6 +20,13 @@
 
 <button id="addProgramButton" onclick="toggleForm('', '', '')">Add Program</button>
 
+<!-- Search Form -->
+<form method="get" action="{{ url_for('views.search_program') }}">
+    <label for="searchProgram">Search by Program Code:</label>
+    <input type="text" id="searchProgram" name="programCode" placeholder="Enter Program Code" required>
+    <button type="submit">Search</button>
+</form>
+
 <div id="formModal" class="modal hidden">
     <div class="modal-content">
         <span class="close" onclick="toggleForm('', '', '')">&times;</span>
@@ -54,19 +61,33 @@
         </tr>
     </thead>
     <tbody>
-        {% for program in programs %}
+        {% if search_result %}
         <tr>
-            <td>{{ program['programCode'] }}</td>
-            <td>{{ program['programTitle'] }}</td>
-            <td>{{ program['programCollege'] }}</td>
+            <td>{{ search_result['programCode'] }}</td>
+            <td>{{ search_result['programTitle'] }}</td>
+            <td>{{ search_result['programCollege'] }}</td>
             <td>
-                <button onclick="toggleForm('{{ program['programCode'] }}', '{{ program['programTitle'] }}', '{{ program['programCollege'] }}')">Edit</button>
-                <form action="/delete_program/{{ program['programCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                <button onclick="toggleForm('{{ search_result['programCode'] }}', '{{ search_result['programTitle'] }}', '{{ search_result['programCollege'] }}')">Edit</button>
+                <form action="{{ url_for('views.delete_program', programCode=search_result['programCode']) }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
                     <button type="submit">Delete</button>
                 </form>
             </td>
         </tr>
-        {% endfor %}
+        {% else %}
+            {% for program in programs %}
+            <tr>
+                <td>{{ program['programCode'] }}</td>
+                <td>{{ program['programTitle'] }}</td>
+                <td>{{ program['programCollege'] }}</td>
+                <td>
+                    <button onclick="toggleForm('{{ program['programCode'] }}', '{{ program['programTitle'] }}', '{{ program['programCollege'] }}')">Edit</button>
+                    <form action="{{ url_for('views.delete_program', programCode=program['programCode']) }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        {% endif %}
     </tbody>
 </table>
 
@@ -84,9 +105,10 @@
             codeInput.value = programCode;
             titleInput.value = programTitle;
 
+            // Set the college selection
             for (var i = 0; i < collegeSelect.options.length; i++) {
                 if (collegeSelect.options[i].value === collegeCode) {
-                    collegeSelect.selectedIndex = i;
+                    collegeSelect.selectedIndex = i;  // Set the college
                     break;
                 }
             }
@@ -98,7 +120,7 @@
             originalProgramCodeInput.value = "";
             codeInput.value = "";
             titleInput.value = "";
-            collegeSelect.selectedIndex = 0;
+            collegeSelect.selectedIndex = 0; // Reset selection
 
             submitBtn.textContent = "Submit";
             document.getElementById("program-form").action = "/add_program";

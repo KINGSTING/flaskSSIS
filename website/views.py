@@ -16,8 +16,14 @@ def home():
 # Students page
 @views.route('/students', methods=['GET'])
 def view_students():
-    students = Students.get_all_students(get_db_connection())
-    programs = Programs.get_all_programs(get_db_connection())
+    db_connection = get_db_connection()
+    students = Students.get_all_students(db_connection)
+
+    for student in students:
+        student_id = student['IDNumber']
+        Students.check_and_update_status(db_connection, student_id)
+
+    programs = Programs.get_all_programs(db_connection)
     return render_template('student.html', students=students, programs=programs)
 
 
@@ -112,16 +118,19 @@ def edit_student(idNumber):
         if student:
             # Check if the new ID number already exists (and it's not the current student)
             existing_student = Students.find_by_id(conn, new_idNumber)
-            if existing_student and existing_student.idNumber != idNumber:
+            if existing_student and existing_student['IDNumber'] != idNumber:
                 # If the new ID is already in use by another student, flash an error message
                 flash(f"ID Number {new_idNumber} is already in use.", "error")
                 return redirect(url_for('edit_student', idNumber=idNumber))  # Reload the edit page
 
-            # Proceed with the update
-            new_status = student.check_and_set_status(conn)
-            student.update_student(new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender,
-                                   new_status)
+            # Proceed with the update using SQL
+            conn.execute("""
+                UPDATE student 
+                SET IDNumber = ?, firstName = ?, lastName = ?, CourseCode = ?, Year = ?, Gender = ? 
+                WHERE IDNumber = ?
+            """, (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, idNumber))
             conn.commit()
+
             # Check and update status if necessary
             Students.check_and_update_status(conn, new_idNumber)
 
@@ -138,6 +147,20 @@ def edit_student(idNumber):
     conn.close()
 
     return render_template('edit_student.html', student=student)
+
+
+@views.route('/search_student', methods=['GET'])
+def search_student():
+    id_number = request.args.get('idNumber')
+    db_connection = get_db_connection()
+    search_result = Students.find_by_id(db_connection, id_number)
+
+    if search_result:
+        return render_template('student.html', search_result=search_result, students=[],
+                               programs=Programs.get_all_programs(db_connection))
+    else:
+        flash(f'Student with ID {id_number} not found.', 'error')
+        return redirect('/students')
 
 
 # Add program
@@ -180,7 +203,7 @@ def delete_program(programCode):
     finally:
         conn.close()
 
-    return redirect(url_for('views.programPage'))  # Adjust this to your specific page
+    return redirect(url_for('views.view_programs'))  # Adjust this to your specific page
 
 
 # Edit program
@@ -206,6 +229,24 @@ def edit_program(originalProgramCode):
     conn.close()
 
     return render_template('edit_program.html', program=program, colleges=colleges)
+
+
+@views.route('/search_program', methods=['GET'])
+def search_program():
+    programCode = request.args.get('programCode')
+    db_connection = get_db_connection()
+
+    # Search for the program by code
+    search_result = Programs.find_by_program(db_connection, programCode)
+
+    if search_result:
+        # Render the program details if found
+        programs = Programs.get_all_programs(db_connection)
+        return render_template('program.html', search_result=search_result, programs=programs)
+    else:
+        # Flash an error message if not found
+        flash(f'Program with code {programCode} not found.', 'error')
+        return redirect(url_for('views.view_programs'))  # Redirect to the program view
 
 
 @views.route('/add_college', methods=['GET', 'POST'])
@@ -244,6 +285,7 @@ def delete_college(collegeCode):
     conn.close()
     return redirect(url_for('views.collegePage'))
 
+
 # Edit college
 @views.route('/edit_college/<originalCollegeCode>', methods=['POST'])
 def edit_college(originalCollegeCode):
@@ -256,4 +298,20 @@ def edit_college(originalCollegeCode):
     conn.commit()
     conn.close()
 
-    return redirect(url_for('collegePage'))
+    return redirect(url_for('views.collegePage'))
+
+
+@views.route('/search_college', methods=['GET'])
+def search_college():
+    collegeCode = request.args.get('collegeCode')
+    db_connection = get_db_connection()
+
+    # Search for the college by code
+    search_result = Colleges.find_by_college(db_connection, collegeCode)
+
+    if search_result:
+        return render_template('college.html', search_result=search_result,
+                               colleges=Colleges.get_all_colleges(db_connection))
+    else:
+        flash(f'College with code {collegeCode} not found.', 'error')
+        return redirect('/colleges')

@@ -107,6 +107,13 @@
     </div>
 </div>
 
+<!-- Search Form -->
+<form action="/search_student" method="get">
+    <label for="searchID">Search by Student ID:</label>
+    <input type="text" id="searchID" name="idNumber" placeholder="Enter Student ID" required>
+    <button type="submit">Search</button>
+</form>
+
 <!-- Student Table -->
 <table border="1" cellpadding="10">
     <thead>
@@ -122,6 +129,24 @@
         </tr>
     </thead>
     <tbody>
+        {% if search_result %}
+        <tr>
+            <td>{{ search_result.IDNumber }}</td>
+            <td>{{ search_result.firstName }}</td>
+            <td>{{ search_result.lastName }}</td>
+            <td>{{ search_result.CourseCode }}</td>
+            <td>{{ search_result.Year }}</td>
+            <td>{{ search_result.Gender }}</td>
+            <td>{{ search_result.Status }}</td>
+            <td>
+                <button onclick="openEditForm('{{ search_result.IDNumber }}', '{{ search_result.firstName }}', '{{ search_result.lastName }}', '{{ search_result.CourseCode }}', '{{ search_result.Year }}', '{{ search_result.Gender }}')">Edit</button>
+                <form action="/delete_student/{{ search_result.IDNumber }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <!-- Show all students when there's no search result -->
         {% for student in students %}
         <tr>
             <td>{{ student['IDNumber'] }}</td>
@@ -139,6 +164,7 @@
             </td>
         </tr>
         {% endfor %}
+        {% endif %}
     </tbody>
 </table>
 
