@@ -3,129 +3,162 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-<h1>Simple Student Information System</h1>
-<button id="addStudentButton" onclick="toggleForm()">Add Student</button>
 
-<div id="formModal" class="modal hidden">
-    <div class="modal-content">
-        <span class="close" onclick="toggleForm()">&times;</span>
-        <form id="student-form" action="/add_student" method="post">
-            <label for="idNumber">ID Number:</label>
-            <input type="text" id="idNumber" name="idNumber" required>
+<!-- Landing Page Content -->
+<section class="landing-section">
+    <h1>Welcome to the Student Information System</h1>
+    <p>Our system makes managing student data easy, fast, and secure. Keep track of all students' academic records in one place!</p>
+    <a href="/students" class="cta-btn">Get Started</a>
+</section>
 
-            <label for="firstName">First Name:</label>
-            <input type="text" id="firstName" name="firstName" required>
+<!-- About Section -->
+<section class="about-section">
+    <h2>What is the Student Information System?</h2>
+    <p>This system allows you to efficiently manage student details, course enrollments, and academic records. Whether you need to add, edit, or view student information, our system streamlines the process to save time and reduce errors.</p>
+</section>
 
-            <label for="lastName">Last Name:</label>
-            <input type="text" id="lastName" name="lastName" required>
+<!-- Features Section -->
+<section class="features-section">
+    <h2>Features</h2>
+    <ul>
+        <li>Student data management</li>
+        <li>Course enrollment</li>
+        <li>Attendance tracking</li>
+        <li>Report generation</li>
+    </ul>
+</section>
 
-            <label for="courseCode">Course Code:</label>
-            <input type="text" id="courseCode" name="courseCode" required>
+<!-- Call to Action Section -->
+<section class="cta-section">
+    <h2>Ready to manage your students?</h2>
+     <a href="/students" class="cta-btn">Add Student Information</a>
+</section>
 
-            <label for="year">Year Level:</label>
-            <select id="year" name="year" required>
-                <option value="" disabled selected>Select your Year Level</option>
-                <option value="Male">1st Year</option>
-                <option value="Female">2nd Year</option>
-                <option value="Other">3rd Year</option>
-                <option value="Other">4th Year</option>
-                <option value="Other">5th Year</option>
-                <option value="Other">6th Year</option>
-            </select>
 
-            <label for="gender">Gender:</label>
-            <select id="gender" name="gender" required>
-                <option value="" disabled selected>Select your gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-            </select>
-
-            <button type="submit">Submit</button>
-        </form>
-    </div>
-</div>
-
-<!-- Student Table -->
-<table border="1" cellpadding="10">
-    <thead>
-        <tr>
-            <th>ID Number</th>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Course Code</th>
-            <th>Year</th>
-            <th>Gender</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for student in students %}
-        <tr>
-            <td>{{ student['IDNumber'] }}</td>
-            <td>{{ student['firstName'] }}</td>
-            <td>{{ student['lastName'] }}</td>
-            <td>{{ student['CourseCode'] }}</td>
-            <td>{{ student['Year'] }}</td>
-            <td>{{ student['Gender'] }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
 
 <style>
+    /* General Styles */
     body {
         font-family: Arial, sans-serif;
         margin: 20px;
     }
 
+    section {
+        margin-bottom: 40px;
+    }
+
+    /* Landing Section */
+    .landing-section {
+        text-align: center;
+        padding: 60px;
+        background-color: #2a9d8f;
+        color: white;
+    }
+
+    .landing-section h1 {
+        font-size: 2.5em;
+        margin-bottom: 20px;
+    }
+
+    .landing-section p {
+        font-size: 1.2em;
+        margin-bottom: 30px;
+    }
+
+    .cta-btn {
+        background-color: #e76f51;
+        color: white;
+        padding: 15px 30px;
+        font-size: 18px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .cta-btn:hover {
+        background-color: #f4a261;
+    }
+
+    /* About Section */
+    .about-section, .features-section {
+        padding: 40px;
+        text-align: center;
+        background-color: #f4f4f9;
+    }
+
+    .about-section h2, .features-section h2 {
+        font-size: 2em;
+        margin-bottom: 20px;
+    }
+
+    /* Features Section */
+    .features-section ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .features-section ul li {
+        font-size: 1.2em;
+        margin: 10px 0;
+    }
+
+    /* Call to Action Section */
+    .cta-section {
+        text-align: center;
+        padding: 40px;
+        background-color: #2a9d8f;
+        color: white;
+    }
+
+    /* Form Modal Styles */
     .modal {
-        display: none; /* Hide by default */
-        position: fixed; /* Stay in place */
-        z-index: 1; /* Sit on top */
+        display: none;
+        position: fixed;
+        z-index: 1;
         left: 0;
         top: 0;
-        width: 100%; /* Full width */
-        height: 100%; /* Full height */
-        overflow: auto; /* Enable scroll if needed */
-        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
     }
 
     .modal-content {
         background-color: #fefefe;
-        margin: 10% auto; /* Center the modal */
+        margin: 10% auto;
         padding: 20px;
         border: 1px solid #888;
-        width: 300px; /* Slender width */
-        border-radius: 5px; /* Rounded corners */
+        width: 300px;
+        border-radius: 5px;
     }
 
     .modal.hidden {
-        display: none; /* Hide the modal */
+        display: none;
     }
 
     .modal.show {
-        display: block; /* Show the modal */
+        display: block;
     }
 
     form {
         display: flex;
-        flex-direction: column; /* Stack form elements vertically */
+        flex-direction: column;
     }
 
     label {
-        margin: 5px 0 2px; /* Spacing for labels */
+        margin: 5px 0;
         font-weight: bold;
     }
 
-    input {
+    input, select {
         padding: 8px;
-        margin-bottom: 10px; /* Spacing between inputs */
+        margin-bottom: 10px;
         border: 1px solid #ccc;
-        border-radius: 4px; /* Rounded edges */
+        border-radius: 4px;
     }
 
     button {
-        background-color: #4CAF50; /* Green */
+        background-color: #4CAF50;
         color: white;
         padding: 10px;
         border: none;
@@ -134,23 +167,7 @@
     }
 
     button:hover {
-        background-color: #45a049; /* Darker green on hover */
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-    }
-
-    th, td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-    }
-
-    th {
-        background-color: #f2f2f2;
+        background-color: #45a049;
     }
 </style>
 
@@ -159,6 +176,10 @@
         var modal = document.getElementById("formModal");
         modal.classList.toggle("hidden");
         modal.classList.toggle("show");
+    }
+
+    function scrollToForm() {
+        document.getElementById("student-form-section").scrollIntoView({ behavior: "smooth" });
     }
 </script>
 

@@ -14,6 +14,7 @@ def home():
 
 
 # Students page
+@views.route("/")
 @views.route('/students', methods=['GET'])
 def view_students():
     db_connection = get_db_connection()
