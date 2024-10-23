@@ -26,11 +26,12 @@
     <button type="submit">Search</button>
 </form>
 
+<!-- Modal for Adding/Editing College -->
 <div id="formModal" class="modal hidden">
     <div class="modal-content">
         <span class="close" onclick="toggleForm('', '')">&times;</span>
-        <form id="college-form" action="/add_college" method="post" onsubmit="return confirmUpdate();">
-            <input type="hidden" id="originalCollegeCode" name="originalCollegeCode" value=""> <!-- To track the original collegeCode for updates -->
+        <form id="college-form" action="{{ url_for('views.add_college') }}" method="post" onsubmit="return confirmUpdate();">
+            <input type="hidden" id="originalCollegeCode" name="originalCollegeCode" value="">
             <label for="collegeCode">College Code:</label><br>
             <input type="text" id="collegeCode" name="collegeCode" required><br>
             <label for="collegeName">College Name:</label><br>
@@ -51,29 +52,33 @@
     </thead>
     <tbody>
         {% if search_result %}
-        <tr>
-            <td>{{ search_result['collegeCode'] }}</td>
-            <td>{{ search_result['collegeName'] }}</td>
-            <td>
-                <button onclick="toggleForm('{{ search_result['collegeCode'] }}', '{{ search_result['collegeName'] }}')">Edit</button>
-                <form action="/delete_college/{{ search_result['collegeCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
-                    <button type="submit">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% else %}
-            {% for college in colleges %}
             <tr>
-                <td>{{ college['collegeCode'] }}</td>
-                <td>{{ college['collegeName'] }}</td>
+                <td>{{ search_result['collegeCode'] }}</td>
+                <td>{{ search_result['collegeName'] }}</td>
                 <td>
-                    <button onclick="toggleForm('{{ college['collegeCode'] }}', '{{ college['collegeName'] }}')">Edit</button>
-                    <form action="/delete_college/{{ college['collegeCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                    <button onclick="toggleForm('{{ search_result['collegeCode'] }}', '{{ search_result['collegeName'] }}')">Edit</button>
+                    <form action="{{ url_for('views.delete_college', collegeCode=search_result['collegeCode']) }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
                         <button type="submit">Delete</button>
                     </form>
                 </td>
             </tr>
+        {% elif colleges %}
+            {% for college in colleges %}
+                <tr>
+                    <td>{{ college['collegeCode'] }}</td>
+                    <td>{{ college['collegeName'] }}</td>
+                    <td>
+                        <button onclick="toggleForm('{{ college['collegeCode'] }}', '{{ college['collegeName'] }}')">Edit</button>
+                        <form action="{{ url_for('views.delete_college', collegeCode=college['collegeCode']) }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
             {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="3">No colleges found.</td>
+            </tr>
         {% endif %}
     </tbody>
 </table>
@@ -87,21 +92,17 @@
         var submitBtn = document.getElementById("submitBtn");
 
         if (collegeCode && collegeName) {
-            // Editing mode
-            originalCollegeCodeInput.value = collegeCode; // Store the original code for updates
+            originalCollegeCodeInput.value = collegeCode;
             codeInput.value = collegeCode;
             nameInput.value = collegeName;
             submitBtn.textContent = "Update";
             document.getElementById("college-form").action = "/edit_college/" + collegeCode;
-            document.getElementById("college-form").onsubmit = confirmUpdate;
         } else {
-            // Adding mode
-            originalCollegeCodeInput.value = ""; // Clear the original code
+            originalCollegeCodeInput.value = "";
             codeInput.value = "";
             nameInput.value = "";
             submitBtn.textContent = "Submit";
             document.getElementById("college-form").action = "/add_college";
-            document.getElementById("college-form").onsubmit = null; // No confirmation needed for add
         }
 
         modal.classList.toggle("hidden");

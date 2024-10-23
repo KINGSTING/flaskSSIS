@@ -41,7 +41,7 @@
             <select id="collegeCode" name="collegeCode" required>
                 <option value="">Select a college</option>
                 {% for college in colleges %}
-                <option value="{{ college[0] }}">{{ college[0] }} - {{ college[1] }}</option>
+                <option value="{{ college['collegeCode'] }}">{{ college['collegeCode'] }} - {{ college['collegeName'] }}</option>
                 {% endfor %}
             </select><br>
 
@@ -68,9 +68,9 @@
             <td>{{ search_result['programCollege'] }}</td>
             <td>
                 <button onclick="toggleForm('{{ search_result['programCode'] }}', '{{ search_result['programTitle'] }}', '{{ search_result['programCollege'] }}')">Edit</button>
-                <form action="{{ url_for('views.delete_program', programCode=search_result['programCode']) }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
-                    <button type="submit">Delete</button>
-                </form>
+                <form action="/delete_program/{{ program['programCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                        <button type="submit">Delete</button>
+                    </form>
             </td>
         </tr>
         {% else %}
@@ -81,7 +81,7 @@
                 <td>{{ program['programCollege'] }}</td>
                 <td>
                     <button onclick="toggleForm('{{ program['programCode'] }}', '{{ program['programTitle'] }}', '{{ program['programCollege'] }}')">Edit</button>
-                    <form action="{{ url_for('views.delete_program', programCode=program['programCode']) }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
+                    <form action="/delete_program/{{ program['programCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
                         <button type="submit">Delete</button>
                     </form>
                 </td>

@@ -1,13 +1,22 @@
-import sqlite3
+import mysql.connector
 from flask import Flask
 from os import path
+import cloudinary
+import cloudinary.uploader
 
-DB_NAME = "database.db"
+DB_NAME = "mydb"  # Name of your MySQL database
 
 
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = "helloworld"
+
+    # Configure Cloudinary
+    cloudinary.config(
+        cloud_name='dzn6wdijk',  # Your Cloudinary Cloud Name
+        api_key='872366418514214',  # Your Cloudinary API Key
+        api_secret='q6DG-UPeMdJllbj3C-ZSmn-33fY'  # Your Cloudinary API Secret
+    )
 
     from .views import views
     # from .auth import auth
@@ -20,55 +29,64 @@ def create_app():
     return app
 
 
-# Create database here
 def create_database(app):
-    # Check if the database exists, and create tables if not
-    if not path.exists("website/" + DB_NAME):
-        with app.app_context():  # Ensure application context is available
-            conn = sqlite3.connect(DB_NAME)
-            cursor = conn.cursor()
+    try:
+        # Connect to MySQL database
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="password",
+            database=DB_NAME
+        )
+        cursor = conn.cursor()
 
-            # Create `student` table
-            # Create `college` table
-            # Create `college` table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS college (
-                    collegeCode TEXT PRIMARY KEY,
-                    collegeName TEXT
-                )
-            ''')
+        # Create tables
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS college (
+                collegeCode VARCHAR(255) PRIMARY KEY,
+                collegeName VARCHAR(255)
+            )
+        ''')
 
-            # Create `program` table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS program (
-                    programCode TEXT PRIMARY KEY,
-                    programTitle TEXT,
-                    programCollege TEXT,
-                    FOREIGN KEY (programCollege) REFERENCES college(collegeCode) ON DELETE CASCADE
-                )
-            ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS program (
+                programCode VARCHAR(255) PRIMARY KEY,
+                programTitle VARCHAR(255),
+                programCollege VARCHAR(255),
+                FOREIGN KEY (programCollege) REFERENCES college(collegeCode) ON DELETE CASCADE
+            )
+        ''')
 
-            # Create `student` table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS student (
-                    IDNumber TEXT PRIMARY KEY,
-                    firstName TEXT NOT NULL,
-                    lastName TEXT NOT NULL,
-                    CourseCode TEXT NOT NULL,
-                    Status TEXT NOT NULL,
-                    Year TEXT NOT NULL,
-                    Gender TEXT NOT NULL,
-                    FOREIGN KEY (CourseCode) REFERENCES program(programCode) 
-                )
-            ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS student (
+                IDNumber VARCHAR(255) PRIMARY KEY,
+                firstName VARCHAR(255) NOT NULL,
+                lastName VARCHAR(255) NOT NULL,
+                CourseCode VARCHAR(255) NOT NULL,
+                Status VARCHAR(255) NOT NULL,
+                Year VARCHAR(255) NOT NULL,
+                Gender VARCHAR(255) NOT NULL,
+                FOREIGN KEY (CourseCode) REFERENCES program(programCode)
+            )
+        ''')
 
-            conn.commit()  # Commit the changes
-            conn.close()  # Close the connection
+        conn.commit()
+        cursor.close()
+        conn.close()
 
         print("Created database and tables!")
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
 
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row  # Enable named column access
-    return conn
+    try:
+        return mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="password",
+            database="mydb"
+        )
+    except mysql.connector.Error as err:
+        print(f"Error connecting to database: {err}")
+        return None

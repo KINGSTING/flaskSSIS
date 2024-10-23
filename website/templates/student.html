@@ -107,6 +107,12 @@
     </div>
 </div>
 
+<form method="POST" action="{{ url_for('views.upload_image') }}" enctype="multipart/form-data">
+    <label for="file">Select image:</label>
+    <input type="file" name="file" id="file" accept="image/*" required>
+    <button type="submit">Upload</button>
+</form>
+
 <!-- Search Form -->
 <form action="/search_student" method="get">
     <label for="searchID">Search by Student ID:</label>

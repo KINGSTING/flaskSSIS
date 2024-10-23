@@ -1,5 +1,5 @@
 import re
-import sqlite3
+import mysql.connector
 from . import get_db_connection
 
 
@@ -17,7 +17,7 @@ class Students:
     def save_student(self):
         cursor = self.db.cursor()
         cursor.execute('''INSERT INTO student (IDNumber, firstName, lastName, CourseCode, Year, Gender, Status) 
-                          VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                          VALUES (%s, %s, %s, %s, %s, %s, %s)''',
                        (self.idNumber, self.firstName, self.lastName, self.courseCode, self.year, self.gender,
                         self.status))
         self.db.commit()
@@ -36,45 +36,43 @@ class Students:
         cursor = self.db.cursor()
         cursor.execute("""
             UPDATE student 
-            SET idNumber = ?, firstName = ?, lastName = ?, courseCode = ?, year = ?, gender = ?, status = ?
-            WHERE IDNumber = ?""",
+            SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s, Status = %s
+            WHERE IDNumber = %s""",
                        (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, new_status,
                         self.idNumber))
         self.db.commit()
         cursor.close()
 
+    @staticmethod
     def check_id_exists(db_connection, idNumber):
         cursor = db_connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM student WHERE IDNumber = ?", (idNumber,))
+        cursor.execute("SELECT COUNT(*) FROM student WHERE IDNumber = %s", (idNumber,))
         count = cursor.fetchone()[0]
         cursor.close()
         return count > 0  # Returns True if the ID exists, otherwise False
 
+    @staticmethod
     def validate_id_format(idNumber):
         """
         Validate if the idNumber is in the format YYYY-NNNN.
         """
         pattern = r'^\d{4}-\d{4}$'
-        if re.match(pattern, idNumber):
-            return True
-        else:
-            return False
+        return re.match(pattern, idNumber) is not None
 
     def delete_student(self):
         cursor = self.db.cursor()
-        cursor.execute('DELETE FROM student WHERE IDNumber = ?', (self.idNumber,))
+        cursor.execute('DELETE FROM student WHERE IDNumber = %s', (self.idNumber,))
         self.db.commit()
         cursor.close()
 
     @staticmethod
     def find_by_id(db_connection, idNumber):
         cursor = db_connection.cursor()
-        cursor.execute("SELECT * FROM student WHERE IDNumber = ?", (idNumber,))
+        cursor.execute("SELECT * FROM student WHERE IDNumber = %s", (idNumber,))
         row = cursor.fetchone()
         cursor.close()
 
         if row:
-            # Return the data as a dictionary
             return {
                 'IDNumber': row[0],
                 'firstName': row[1],
@@ -90,36 +88,31 @@ class Students:
     def check_and_update_status(conn, idNumber):
         print(f"Checking status for student ID: {idNumber}")
 
-        # Query to get the current program code for the student
-        student = conn.execute("SELECT CourseCode FROM student WHERE IDNumber = ?", (idNumber,)).fetchone()
+        student = conn.cursor(dictionary=True).execute("SELECT CourseCode FROM student WHERE IDNumber = %s",
+                                                       (idNumber,)).fetchone()
 
         if student:
             course_code = student['CourseCode']
             print(f"Found course code for student {idNumber}: {course_code}")
 
-            # Check if the program code exists
-            program_exists = conn.execute("SELECT * FROM program WHERE programCode = ?", (course_code,)).fetchone()
+            program_exists = conn.cursor(dictionary=True).execute("SELECT * FROM program WHERE programCode = %s",
+                                                                  (course_code,)).fetchone()
 
             if not program_exists:
                 print(f"Program code {course_code} does not exist. Updating status to 'Unenrolled'.")
-                # Update status to 'Unenrolled' if the program does not exist
-                conn.execute("UPDATE student SET Status = 'Unenrolled' WHERE IDNumber = ?", (idNumber,))
+                conn.cursor().execute("UPDATE student SET Status = 'Unenrolled' WHERE IDNumber = %s", (idNumber,))
                 conn.commit()
                 print(f"Student ID {idNumber} status updated to 'Unenrolled'.")
-                return True  # Indicate that status was updated
-
+                return True
             else:
                 print(f"Program code {course_code} exists. Updating status to 'Enrolled'.")
-                # Update status to 'Enrolled' if the program exists
-                conn.execute("UPDATE student SET Status = 'Enrolled' WHERE IDNumber = ?", (idNumber,))
+                conn.cursor().execute("UPDATE student SET Status = 'Enrolled' WHERE IDNumber = %s", (idNumber,))
                 conn.commit()
                 print(f"Student ID {idNumber} status updated to 'Enrolled'.")
-                return True  # Indicate that status was updated
-
+                return True
         else:
             print(f"Student ID {idNumber} not found.")
-
-        return False  # Indicate that no update was necessary
+        return False
 
 
 class Programs:
@@ -132,7 +125,7 @@ class Programs:
     def save_program(self):
         cursor = self.db.cursor()
         cursor.execute(''' 
-            INSERT INTO program (programCode, programTitle, programCollege) VALUES (?, ?, ?)
+            INSERT INTO program (programCode, programTitle, programCollege) VALUES (%s, %s, %s)
         ''', (self.programCode, self.programTitle, self.programCollege))
         self.db.commit()
         cursor.close()
@@ -141,65 +134,62 @@ class Programs:
     def get_all_programs(db_connection):
         cursor = db_connection.cursor()
         cursor.execute('SELECT * FROM program')
-        programs = cursor.fetchall()
+        rows = cursor.fetchall()
         cursor.close()
+
+        # Convert the list of tuples into a list of dictionaries
+        programs = []
+        for row in rows:
+            programs.append({
+                'programCode': row[0],
+                'programTitle': row[1],
+                'programCollege': row[2]
+            })
+
         return programs
 
     @staticmethod
     def find_by_program(db_connection, programCode):
         cursor = db_connection.cursor()
-        cursor.execute('SELECT * FROM program WHERE programCode = ?', (programCode,))
+        cursor.execute('SELECT * FROM program WHERE programCode = %s', (programCode,))
         row = cursor.fetchone()
         cursor.close()
 
         if row:
-            # Return the data as a dictionary
-            return {
-                'programCode': row[0],
-                'programTitle': row[1],
-                'programCollege': row[2],
-            }
+            return Programs(row[0], row[1], row[2])
         return None
 
     def update_program(self, conn, new_programCode, new_programTitle, new_collegeCode):
         cursor = conn.cursor()
-
         cursor.execute(''' 
             UPDATE program 
-            SET programCode = ?, programTitle = ?, programCollege = ? 
-            WHERE programCode = ? 
-        ''', (new_programCode, new_programTitle, new_collegeCode, self.programCode))  # Use self.programCode instead
-        conn.commit()  # Commit the changes
+            SET programCode = %s, programTitle = %s, programCollege = %s 
+            WHERE programCode = %s 
+        ''', (new_programCode, new_programTitle, new_collegeCode, self.programCode))
+        conn.commit()
         cursor.close()
 
     def delete_program(self):
         cursor = self.db.cursor()
-        cursor.execute('DELETE FROM program WHERE programCode = ?', (self.programCode,))
+        cursor.execute('DELETE FROM program WHERE programCode = %s', (self.programCode,))
         self.db.commit()
         cursor.close()
 
     @staticmethod
     def check_program_exists(db_connection, programCode):
-        """
-        Check if the programCode already exists in the database.
-        """
         cursor = db_connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM program WHERE programCode = ?", (programCode,))
+        cursor.execute("SELECT COUNT(*) FROM program WHERE programCode = %s", (programCode,))
         count = cursor.fetchone()[0]
         cursor.close()
-        return count > 0  # Return True if the programCode exists
+        return count > 0
 
+    @staticmethod
     def delete_program_if_college_exists(conn, programCode):
-        # Retrieve the program's details
         program = Programs.find_by_program(conn, programCode)
-
         if program:
-            # Check if the program's college exists
             college_exists = Colleges.check_college_exists(conn, program.programCollege)
-
             if not college_exists:
-                # If the college does not exist, delete the program
-                conn.execute("DELETE FROM program WHERE programCode = ?", (programCode,))
+                conn.cursor().execute("DELETE FROM program WHERE programCode = %s", (programCode,))
                 conn.commit()
                 return f"Program with code {programCode} deleted successfully as the college does not exist."
             else:
@@ -209,8 +199,9 @@ class Programs:
 
     @staticmethod
     def get_programs_by_college(conn, collegeCode):
-        cursor = conn.execute("SELECT * FROM program WHERE collegeCode = ?", (collegeCode,))
-        return cursor.fetchall()  # Assuming this returns a list of program objects
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM program WHERE programCollege = %s", (collegeCode,))
+        return cursor.fetchall()
 
 
 class Colleges:
@@ -222,7 +213,7 @@ class Colleges:
     def save_college(self):
         cursor = self.db.cursor()
         cursor.execute(''' 
-            INSERT INTO college (collegeCode, collegeName) VALUES (?, ?)
+            INSERT INTO college (collegeCode, collegeName) VALUES (%s, %s)
         ''', (self.collegeCode, self.collegeName))
         self.db.commit()
         cursor.close()
@@ -231,54 +222,49 @@ class Colleges:
     def get_all_colleges(db_connection):
         cursor = db_connection.cursor()
         cursor.execute('SELECT * FROM college')
-        colleges = cursor.fetchall()
+        rows = cursor.fetchall()
         cursor.close()
+
+        # Convert the list of tuples into a list of dictionaries
+        colleges = []
+        for row in rows:
+            colleges.append({
+                'collegeCode': row[0],
+                'collegeName': row[1]
+            })
         return colleges
+
+    @staticmethod
+    def check_college_exists(db_connection, collegeCode):
+        cursor = db_connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM college WHERE collegeCode = %s", (collegeCode,))
+        count = cursor.fetchone()[0]
+        cursor.close()
+        return count > 0  # Returns True if the college exists, otherwise False
 
     @staticmethod
     def find_by_college(db_connection, collegeCode):
         cursor = db_connection.cursor()
-        cursor.execute('SELECT * FROM college WHERE collegeCode = ?', (collegeCode,))
+        cursor.execute('SELECT * FROM college WHERE collegeCode = %s', (collegeCode,))
         row = cursor.fetchone()
         cursor.close()
 
         if row:
-            return {
-                'collegeCode': row[0],
-                'collegeName': row[1],
-                # Add other fields as necessary
-            }
+            return Colleges(row[0], row[1])
         return None
 
-    @staticmethod
-    def update_college(conn, originalCollegeCode, new_collegeCode, new_collegeName):
-        cursor = conn.cursor()
-        cursor.execute(""" 
+    def update_college(self, new_collegeCode, new_collegeName):
+        cursor = self.db.cursor()
+        cursor.execute('''
             UPDATE college 
-            SET collegeCode = ?, collegeName = ? 
-            WHERE collegeCode = ?
-        """, (new_collegeCode, new_collegeName, originalCollegeCode))
-        conn.commit()
+            SET collegeCode = %s, collegeName = %s 
+            WHERE collegeCode = %s
+        ''', (new_collegeCode, new_collegeName, self.collegeCode))
+        self.db.commit()
         cursor.close()
 
     def delete_college(self):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Step 1: Delete programs associated with this college
-        cursor.execute("DELETE FROM program WHERE programCollege = ?", (self.collegeCode,))
-
-        # Step 2: Now delete the college itself
-        cursor.execute("DELETE FROM college WHERE collegeCode = ?", (self.collegeCode,))
-
-        # Commit both deletions
-        conn.commit()
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM college WHERE collegeCode = %s', (self.collegeCode,))
+        self.db.commit()
         cursor.close()
-
-    @staticmethod
-    def check_college_exists(conn, college_code):
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM college WHERE collegeCode = ?", (college_code,))
-        exists = cursor.fetchone()[0] > 0  # Returns True if exists, else False
-        cursor.close()
-        return exists

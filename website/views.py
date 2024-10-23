@@ -1,7 +1,8 @@
-import sqlite3
+import mysql.connector  # Import MySQL Connector
 from flask import Blueprint, render_template, request, redirect, flash, url_for
 from .models import Students, Programs, Colleges
 from . import get_db_connection  # Import your connection function
+import cloudinary.uploader
 
 views = Blueprint("views", __name__)
 
@@ -14,7 +15,6 @@ def home():
 
 
 # Students page
-@views.route("/")
 @views.route('/students', methods=['GET'])
 def view_students():
     db_connection = get_db_connection()
@@ -31,18 +31,19 @@ def view_students():
 # Programs page
 @views.route('/programs', methods=['GET'])
 def view_programs():
-    programs = Programs.get_all_programs(get_db_connection())
-    colleges = Colleges.get_all_colleges(get_db_connection())
+    db_connection = get_db_connection()
+    programs = Programs.get_all_programs(db_connection)
+    colleges = Colleges.get_all_colleges(db_connection)
     return render_template('program.html', programs=programs, colleges=colleges)
 
 
 # Colleges page
-@views.route("/colleges")
-def collegePage():
+@views.route('/colleges', methods=['GET'])
+def college_page():
     conn = get_db_connection()
-    all_colleges = Colleges.get_all_colleges(conn)
-    conn.close()
-    return render_template("college.html", colleges=all_colleges)
+    colleges = Colleges.get_all_colleges(conn)  # This should query your database and return the college list
+    print(colleges)  # For debugging purposes, check the content of colleges
+    return render_template('college.html', colleges=colleges)
 
 
 # Add student
@@ -75,7 +76,7 @@ def add_student():
             else:
                 # Add new student
                 new_student = Students(idNumber, firstName, lastName, courseCode, year, gender, "Enrolled")
-                new_student.save_student()
+                new_student.save_student()  # Pass the connection to the save method
                 flash("Student added successfully!", "success")
                 # Check and update status if necessary
                 Students.check_and_update_status(conn, idNumber)
@@ -93,7 +94,7 @@ def delete_student(idNumber):
     conn = get_db_connection()
     student = Students.find_by_id(conn, idNumber)
     if student:
-        student.delete_student()
+        student.delete_student(conn)  # Pass the connection to the delete method
         conn.commit()  # Commit the changes
     conn.close()
     return redirect(url_for('views.view_students'))
@@ -122,14 +123,13 @@ def edit_student(idNumber):
             if existing_student and existing_student['IDNumber'] != idNumber:
                 # If the new ID is already in use by another student, flash an error message
                 flash(f"ID Number {new_idNumber} is already in use.", "error")
-                return redirect(url_for('edit_student', idNumber=idNumber))  # Reload the edit page
+                return redirect(url_for('views.edit_student', idNumber=idNumber))  # Reload the edit page
 
             # Proceed with the update using SQL
-            conn.execute("""
-                UPDATE student 
-                SET IDNumber = ?, firstName = ?, lastName = ?, CourseCode = ?, Year = ?, Gender = ? 
-                WHERE IDNumber = ?
-            """, (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, idNumber))
+            conn.execute("""UPDATE student 
+                            SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s 
+                            WHERE IDNumber = %s""",
+                         (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, idNumber))
             conn.commit()
 
             # Check and update status if necessary
@@ -179,7 +179,7 @@ def add_program():
 
         # Add the new program if it doesn't exist
         new_program = Programs(programCode, programTitle, programCollege)
-        new_program.save_program()
+        new_program.save_program()  # Pass the connection to the save method
         flash("Program added successfully!", "success")
         return redirect(url_for('views.view_programs'))
 
@@ -192,10 +192,10 @@ def delete_program(programCode):
     conn = get_db_connection()
     try:
         # Update the status of students to "unenrolled"
-        conn.execute("UPDATE student SET Status = 'Unenrolled' WHERE CourseCode = ?", (programCode,))
+        conn.execute("UPDATE student SET Status = 'Unenrolled' WHERE CourseCode = %s", (programCode,))
 
         # Now delete the program
-        conn.execute("DELETE FROM program WHERE programCode = ?", (programCode,))
+        conn.execute("DELETE FROM program WHERE programCode = %s", (programCode,))
         conn.commit()
         flash(f"Program with code {programCode} deleted and associated students set to Unenrolled.", "success")
     except Exception as e:
@@ -237,35 +237,35 @@ def search_program():
     programCode = request.args.get('programCode')
     db_connection = get_db_connection()
 
-    # Search for the program by code
-    search_result = Programs.find_by_program(db_connection, programCode)
-
+    # Search for the program using the provided code
+    search_result = Programs.find_by_program_code(db_connection, programCode)
     if search_result:
-        # Render the program details if found
-        programs = Programs.get_all_programs(db_connection)
-        return render_template('program.html', search_result=search_result, programs=programs)
+        return render_template('program.html', search_result=search_result,
+                               programs=[], colleges=Colleges.get_all_colleges(db_connection))
     else:
-        # Flash an error message if not found
         flash(f'Program with code {programCode} not found.', 'error')
-        return redirect(url_for('views.view_programs'))  # Redirect to the program view
+        return redirect('/programs')
 
 
+# Add college
 @views.route('/add_college', methods=['GET', 'POST'])
 def add_college():
     if request.method == "POST":
         collegeCode = request.form.get("collegeCode")
         collegeName = request.form.get("collegeName")
 
+        db_connection = get_db_connection()  # Get the DB connection
+
         # Check if the collegeCode already exists
-        if Colleges.check_college_exists(get_db_connection(), collegeCode):
+        if Colleges.check_college_exists(db_connection, collegeCode):
             flash(f"College with code {collegeCode} already exists!", "error")
-            return redirect(url_for('views.collegePage'))  # Make sure the route exists
+            return redirect(url_for('views.collegePage'))
 
         # Add the new college if it doesn't exist
         new_college = Colleges(collegeCode, collegeName)
-        new_college.save_college()
+        new_college.save_college()  # Pass the connection to the save method
         flash("College added successfully!", "success")
-        return redirect(url_for('views.collegePage'))  # Make sure the route exists
+        return redirect(url_for('views.collegePage'))
 
     return render_template('college.html')
 
@@ -277,14 +277,14 @@ def delete_college(collegeCode):
     college = Colleges.find_by_college(conn, collegeCode)
 
     if college:
-        college.delete_college()  # This should handle the deletion logic
+        college.delete_college()  # Pass the connection to the delete method
         conn.commit()  # Commit the changes
         flash(f"College with code {collegeCode} deleted successfully.", "success")
     else:
         flash(f"No college found with code {collegeCode}.", "error")
 
     conn.close()
-    return redirect(url_for('views.collegePage'))
+    return redirect(url_for('views.college_page'))
 
 
 # Edit college
@@ -299,9 +299,11 @@ def edit_college(originalCollegeCode):
     conn.commit()
     conn.close()
 
+    flash("College updated successfully!", "success")
     return redirect(url_for('views.collegePage'))
 
 
+# Search college
 @views.route('/search_college', methods=['GET'])
 def search_college():
     collegeCode = request.args.get('collegeCode')
@@ -316,3 +318,34 @@ def search_college():
     else:
         flash(f'College with code {collegeCode} not found.', 'error')
         return redirect('/colleges')
+
+
+# Upload image
+@views.route('/upload_image', methods=['POST'])
+def upload_image():
+    # Check if a file was submitted
+    if 'file' not in request.files:
+        flash("No file part", "error")
+        return redirect(request.url)
+
+    file = request.files['file']
+
+    if file.filename == '':
+        flash("No selected file", "error")
+        return redirect(request.url)
+
+    if file:
+        try:
+            # Upload the image to Cloudinary
+            result = cloudinary.uploader.upload(file)
+
+            # Store the uploaded image URL in the database or wherever needed
+            image_url = result['secure_url']
+            flash("Image uploaded successfully!", "success")
+
+            # Optionally, redirect or render a page showing the uploaded image
+            return render_template('student.html', image_url=image_url)
+
+        except Exception as e:
+            flash(f"An error occurred during image upload: {str(e)}", "error")
+            return redirect(request.url)
