@@ -155,20 +155,6 @@ def edit_student(idNumber):
     return render_template('edit_student.html', student=student)
 
 
-@views.route('/search_student', methods=['GET'])
-def search_student():
-    id_number = request.args.get('idNumber')
-    db_connection = get_db_connection()
-    search_result = Students.find_by_id(db_connection, id_number)
-
-    if search_result:
-        return render_template('student.html', search_result=search_result, students=[],
-                               programs=Programs.get_all_programs(db_connection))
-    else:
-        flash(f'Student with ID {id_number} not found.', 'error')
-        return redirect('/students')
-
-
 # Add program
 @views.route('/add_program', methods=['GET', 'POST'])
 def add_program():
@@ -229,21 +215,6 @@ def edit_program(originalProgramCode):
     conn.close()
 
     return render_template('edit_program.html', program=program, colleges=colleges)
-
-
-@views.route('/search_program', methods=['GET'])
-def search_program():
-    programCode = request.args.get('programCode')
-    db_connection = get_db_connection()
-
-    # Search for the program using the provided code
-    search_result = Programs.find_by_program(db_connection, programCode)
-    if search_result:
-        return render_template('program.html', search_result=search_result,
-                               programs=[], colleges=Colleges.get_all_colleges(db_connection))
-    else:
-        flash(f'Program with code {programCode} not found.', 'error')
-        return redirect('/programs')
 
 
 # Add college
@@ -309,25 +280,21 @@ def search_college():
     search_field = request.args.get('searchField')
     search_value = request.args.get('searchValue')
 
-    # Map the selected field to the database column
     field_map = {
         'collegeCode': 'collegeCode',
         'collegeName': 'collegeName'
     }
 
-    # Check if the selected field is valid
     if search_field not in field_map:
         flash("Invalid search field!", "danger")
         return redirect(url_for('views.college_page'))
 
-    # Build the case-insensitive query
     query = f"SELECT * FROM college WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
-    params = [f"%{search_value}%"]  # Use LIKE for partial matches
+    params = [f"%{search_value}%"]
 
-    # Execute the query
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)  # Enable dictionary cursor
         cursor.execute(query, params)
         results = cursor.fetchall()
         cursor.close()
@@ -336,15 +303,118 @@ def search_college():
         flash("An error occurred while searching: " + str(e), "danger")
         return redirect(url_for('views.college_page'))
 
-    # Pass search_result or colleges to the template
     if len(results) == 1:
-        return render_template('college.html', search_result=results[0])  # Pass single result
+        return render_template('college.html', search_result=results[0])  # Single result
     elif len(results) > 1:
-        return render_template('college.html', colleges=results)  # Pass multiple results
+        return render_template('college.html', colleges=results)  # Multiple results
     else:
         flash("No colleges found.", "warning")
-        return redirect(url_for('views.college_page'))  # Redirect if no results found
+        return redirect(url_for('views.college_page'))
 
+
+# Search program
+@views.route('/search_program', methods=['GET'])
+def search_program():
+    search_field = request.args.get('searchField')
+    search_value = request.args.get('searchValue')
+
+    # Define a mapping of allowed search fields to actual database columns
+    field_map = {
+        'programCode': 'programCode',
+        'programTitle': 'programTitle',
+        'programCollege': 'programCollege'
+    }
+
+    # If the search field is invalid, flash an error and redirect
+    if search_field not in field_map:
+        flash("Invalid search field!", "danger")
+        return redirect(url_for('views.program_page'))
+
+    # Build the SQL query dynamically based on the search field
+    query = f"SELECT * FROM program WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
+    params = [f"%{search_value}%"]  # Use wildcard search
+
+    try:
+        # Establish a connection to the database
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)  # Enable dictionary cursor for named columns
+        cursor.execute(query, params)  # Execute the query with the search value
+        results = cursor.fetchall()  # Fetch all matching results
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        # Handle any errors that may occur during the database operation
+        flash("An error occurred while searching: " + str(e), "danger")
+        return redirect(url_for('views.program_page'))
+
+    # Check the number of results and render the appropriate template
+    if len(results) == 1:
+        # If exactly one result is found, render the page with that result
+        return render_template('program.html', search_result=results[0])  # Single result
+    elif len(results) > 1:
+        # If multiple results are found, render the page with a list of programs
+        return render_template('program.html', programs=results)  # Multiple results
+    else:
+        # If no results are found, flash a warning and redirect
+        flash("No programs found.", "warning")
+        return redirect(url_for('views.program_page'))
+
+
+@views.route('/search_student', methods=['GET'])
+def search_student():
+    search_field = request.args.get('searchField')
+    search_value = request.args.get('searchValue')
+
+    # Define a mapping of allowed search fields to actual database columns
+    field_map = {
+        'idNumber': 'IDNumber',
+        'firstName': 'firstName',
+        'lastName': 'lastName',
+        'course': 'CourseCode',
+        'yearLevel': 'Year',
+        'gender': 'Gender',
+        'status': 'Status'
+    }
+
+    # If the search field is invalid, flash an error and redirect
+    if search_field not in field_map:
+        flash("Invalid search field!", "danger")
+        return redirect(url_for('views.view_students'))
+
+    # Determine whether to use LIKE or = based on the search field
+    if search_field == 'gender':
+        # Use exact match for gender
+        query = f"SELECT * FROM student WHERE {field_map[search_field]} = %s"
+    else:
+        # Use wildcard search for other fields
+        query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
+
+    params = [search_value] if search_field == 'gender' else [f"%{search_value}%"]  # No wildcards for gender
+
+    try:
+        # Establish a connection to the database
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)  # Enable dictionary cursor for named columns
+        cursor.execute(query, params)  # Execute the query with the search value
+        results = cursor.fetchall()  # Fetch all matching results
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        # Handle any errors that may occur during the database operation
+        flash("An error occurred while searching: " + str(e), "danger")
+        return redirect(url_for('views.view_students'))
+
+    # Check the number of results and render the appropriate template
+    if len(results) == 1:
+        # If exactly one result is found, render the page with that result
+        return render_template('student.html', search_result=results[0])  # Single result
+    elif len(results) > 1:
+        # If multiple results are found, render the page with a list of students
+        return render_template('student.html', students=results)  # Multiple results
+    else:
+        # If no results are found, flash a warning and redirect
+        flash("No students found.", "warning")
+        return redirect(url_for('views.view_students'))
 
 
 # Upload image
