@@ -21,8 +21,8 @@
 <!-- Add Student Modal -->
 <div id="formModal" class="modal hidden">
     <div class="modal-content">
-        <span class="close" onclick="toggleForm()">&times;</span>
-        <form id="student-form" action="/add_student" method="post">
+        <span class="close" onclick="toggleForm()">X</span>
+        <form id="student-form" action="/add_student" method="post" enctype="multipart/form-data">
             <label for="idNumber">ID Number:</label><br>
             <input type="text" id="idNumber" name="idNumber" required><br>
             <label for="firstName">First Name:</label><br>
@@ -57,10 +57,13 @@
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
             </select><br>
+            <label for="file">Select image:</label>
+            <input type="file" name="file" id="file" accept="image/*" required><br>
             <button type="submit">Submit</button>
         </form>
     </div>
 </div>
+
 
 <!-- Edit Student Modal -->
 <div id="editModal" class="modal hidden">
@@ -107,16 +110,23 @@
     </div>
 </div>
 
-<form method="POST" action="{{ url_for('views.upload_image') }}" enctype="multipart/form-data">
-    <label for="file">Select image:</label>
-    <input type="file" name="file" id="file" accept="image/*" required>
-    <button type="submit">Upload</button>
-</form>
-
 <!-- Search Form -->
 <form action="/search_student" method="get">
-    <label for="searchID">Search by Student ID:</label>
-    <input type="text" id="searchID" name="idNumber" placeholder="Enter Student ID" required>
+    <label for="searchField">Search By:</label>
+    <select id="searchField" name="searchField" required>
+        <option value="">Select Field</option>
+        <option value="idNumber">Student ID</option>
+        <option value="firstName">First Name</option>
+        <option value="lastName">Last Name</option>
+        <option value="course">Course</option>
+        <option value="yearLevel">Year Level</option>
+        <option value="gender">Gender</option>
+        <option value="status">Status</option>
+    </select>
+
+    <label for="searchValue">Search Value:</label>
+    <input type="text" id="searchValue" name="searchValue" placeholder="Enter search value" required>
+
     <button type="submit">Search</button>
 </form>
 

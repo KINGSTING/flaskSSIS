@@ -40,33 +40,37 @@ def create_database(app):
         )
         cursor = conn.cursor()
 
-        # Create tables
+        # Create the 'college' table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS college (
                 collegeCode VARCHAR(255) PRIMARY KEY,
-                collegeName VARCHAR(255)
+                collegeName VARCHAR(255) NOT NULL
             )
         ''')
 
+        # Create the 'program' table with both ON DELETE CASCADE and ON UPDATE CASCADE
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS program (
                 programCode VARCHAR(255) PRIMARY KEY,
-                programTitle VARCHAR(255),
+                programTitle VARCHAR(255) NOT NULL,
                 programCollege VARCHAR(255),
-                FOREIGN KEY (programCollege) REFERENCES college(collegeCode) ON DELETE CASCADE
+                FOREIGN KEY (programCollege) REFERENCES college(collegeCode) 
+                ON DELETE CASCADE 
+                ON UPDATE CASCADE  -- Add ON UPDATE CASCADE here
             )
         ''')
 
+        # Create the 'student' table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS student (
                 IDNumber VARCHAR(255) PRIMARY KEY,
                 firstName VARCHAR(255) NOT NULL,
                 lastName VARCHAR(255) NOT NULL,
-                CourseCode VARCHAR(255) NOT NULL,
+                CourseCode VARCHAR(255),  -- Nullable because of ON DELETE SET NULL
                 Status VARCHAR(255) NOT NULL,
                 Year VARCHAR(255) NOT NULL,
                 Gender VARCHAR(255) NOT NULL,
-                FOREIGN KEY (CourseCode) REFERENCES program(programCode)
+                FOREIGN KEY (CourseCode) REFERENCES program(programCode) ON DELETE SET NULL
             )
         ''')
 

@@ -89,14 +89,17 @@ def add_student():
 
 
 # Delete student
+# Delete student
 @views.route('/delete_student/<idNumber>', methods=['POST'])
 def delete_student(idNumber):
     conn = get_db_connection()
+    cursor = conn.cursor()  # Create a cursor object
     student = Students.find_by_id(conn, idNumber)
     if student:
-        student.delete_student(conn)  # Pass the connection to the delete method
+        student.delete_student(conn)  # Make sure this method uses the cursor if needed
         conn.commit()  # Commit the changes
-    conn.close()
+    cursor.close()  # Close the cursor
+    conn.close()  # Close the connection
     return redirect(url_for('views.view_students'))
 
 
@@ -126,11 +129,13 @@ def edit_student(idNumber):
                 return redirect(url_for('views.edit_student', idNumber=idNumber))  # Reload the edit page
 
             # Proceed with the update using SQL
-            conn.execute("""UPDATE student 
-                            SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s 
-                            WHERE IDNumber = %s""",
-                         (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, idNumber))
+            cursor = conn.cursor()  # Create a cursor object
+            cursor.execute("""UPDATE student 
+                              SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s 
+                              WHERE IDNumber = %s""",
+                           (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, idNumber))
             conn.commit()
+            cursor.close()  # Close the cursor
 
             # Check and update status if necessary
             Students.check_and_update_status(conn, new_idNumber)
@@ -187,24 +192,18 @@ def add_program():
 
 
 # Delete program
-@views.route('/delete_program/<programCode>', methods=['POST'])
-def delete_program(programCode):
+@views.route('/delete_program/<program_code>', methods=['POST'])
+def delete_program(program_code):
     conn = get_db_connection()
     try:
-        # Update the status of students to "unenrolled"
-        conn.execute("UPDATE student SET Status = 'Unenrolled' WHERE CourseCode = %s", (programCode,))
-
-        # Now delete the program
-        conn.execute("DELETE FROM program WHERE programCode = %s", (programCode,))
-        conn.commit()
-        flash(f"Program with code {programCode} deleted and associated students set to Unenrolled.", "success")
+        Programs.delete_program(conn, program_code)
+        flash("Program deleted successfully!", "success")
     except Exception as e:
-        conn.rollback()  # Rollback in case of error
-        flash(f"An error occurred while trying to delete the program: {str(e)}", "error")
+        flash(f"An error occurred while trying to delete the program: {e}", "error")
     finally:
         conn.close()
 
-    return redirect(url_for('views.view_programs'))  # Adjust this to your specific page
+    return redirect(url_for('views.view_programs'))
 
 
 # Edit program
@@ -238,7 +237,7 @@ def search_program():
     db_connection = get_db_connection()
 
     # Search for the program using the provided code
-    search_result = Programs.find_by_program_code(db_connection, programCode)
+    search_result = Programs.find_by_program(db_connection, programCode)
     if search_result:
         return render_template('program.html', search_result=search_result,
                                programs=[], colleges=Colleges.get_all_colleges(db_connection))
@@ -259,13 +258,13 @@ def add_college():
         # Check if the collegeCode already exists
         if Colleges.check_college_exists(db_connection, collegeCode):
             flash(f"College with code {collegeCode} already exists!", "error")
-            return redirect(url_for('views.collegePage'))
+            return redirect(url_for('views.college_page'))
 
         # Add the new college if it doesn't exist
         new_college = Colleges(collegeCode, collegeName)
         new_college.save_college()  # Pass the connection to the save method
         flash("College added successfully!", "success")
-        return redirect(url_for('views.collegePage'))
+        return redirect(url_for('views.college_page'))
 
     return render_template('college.html')
 
@@ -295,29 +294,57 @@ def edit_college(originalCollegeCode):
     new_collegeCode = request.form.get('collegeCode')
     new_collegeName = request.form.get('collegeName')
 
-    Colleges.update_college(conn, originalCollegeCode, new_collegeCode, new_collegeName)
-    conn.commit()
-    conn.close()
+    # Call the update_college method with the connection and the necessary arguments
+    Colleges.update_college(conn, new_collegeCode, new_collegeName)
+
+    conn.close()  # Close the connection after operations
 
     flash("College updated successfully!", "success")
-    return redirect(url_for('views.collegePage'))
+    return redirect(url_for('views.college_page'))
 
 
 # Search college
 @views.route('/search_college', methods=['GET'])
 def search_college():
-    collegeCode = request.args.get('collegeCode')
-    db_connection = get_db_connection()
+    search_field = request.args.get('searchField')
+    search_value = request.args.get('searchValue')
 
-    # Search for the college by code
-    search_result = Colleges.find_by_college(db_connection, collegeCode)
+    # Map the selected field to the database column
+    field_map = {
+        'collegeCode': 'collegeCode',
+        'collegeName': 'collegeName'
+    }
 
-    if search_result:
-        return render_template('college.html', search_result=search_result,
-                               colleges=Colleges.get_all_colleges(db_connection))
+    # Check if the selected field is valid
+    if search_field not in field_map:
+        flash("Invalid search field!", "danger")
+        return redirect(url_for('views.college_page'))
+
+    # Build the case-insensitive query
+    query = f"SELECT * FROM college WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
+    params = [f"%{search_value}%"]  # Use LIKE for partial matches
+
+    # Execute the query
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        flash("An error occurred while searching: " + str(e), "danger")
+        return redirect(url_for('views.college_page'))
+
+    # Pass search_result or colleges to the template
+    if len(results) == 1:
+        return render_template('college.html', search_result=results[0])  # Pass single result
+    elif len(results) > 1:
+        return render_template('college.html', colleges=results)  # Pass multiple results
     else:
-        flash(f'College with code {collegeCode} not found.', 'error')
-        return redirect('/colleges')
+        flash("No colleges found.", "warning")
+        return redirect(url_for('views.college_page'))  # Redirect if no results found
+
 
 
 # Upload image
