@@ -4,42 +4,41 @@ from . import get_db_connection
 
 
 class Students:
-    def __init__(self, idNumber, firstName, lastName, courseCode, year, gender, status):
-        self.db = get_db_connection()
+    def __init__(self, idNumber, firstName, lastName, courseCode, year, gender, status, image_url=None):
         self.idNumber = idNumber
         self.firstName = firstName
         self.lastName = lastName
         self.courseCode = courseCode
         self.year = year
         self.gender = gender
-        self.status = status  # Add status attribute
+        self.status = status
+        self.image_url = image_url  # New field for the image URL
 
-    def save_student(self):
-        cursor = self.db.cursor()
-        cursor.execute('''INSERT INTO student (IDNumber, firstName, lastName, CourseCode, Year, Gender, Status) 
-                          VALUES (%s, %s, %s, %s, %s, %s, %s)''',
-                       (self.idNumber, self.firstName, self.lastName, self.courseCode, self.year, self.gender,
-                        self.status))
-        self.db.commit()
-        cursor.close()
+    def save_student(self, conn):
+        with conn.cursor() as cursor:
+            sql = """
+                INSERT INTO student (IDNumber, firstName, lastName, CourseCode, Year, Gender, Status, imageURL)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(sql, (self.idNumber, self.firstName, self.lastName, self.courseCode, self.year, self.gender, self.status, self.image_url))
+            conn.commit()
 
     @staticmethod
     def get_all_students(db_connection):
         cursor = db_connection.cursor(dictionary=True)  # Use dictionary cursor
-        cursor.execute('SELECT * FROM student')
+        cursor.execute('SELECT * FROM student')  # Correct table name
         students = cursor.fetchall()
         cursor.close()
         return students
 
     def update_student(self, new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender,
-                       new_status):
+                       new_status, new_image_url=None):
         cursor = self.db.cursor()
         cursor.execute("""
             UPDATE student 
-            SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s, Status = %s
+            SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s, Status = %s, imageURL = %s
             WHERE IDNumber = %s""",
-                       (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, new_status,
-                        self.idNumber))
+                       (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, new_status, new_image_url, self.idNumber))
         self.db.commit()
         cursor.close()
 

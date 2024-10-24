@@ -140,6 +140,7 @@
             <th>Year</th>
             <th>Gender</th>
             <th>Status</th>
+            <th>Photo</th> <!-- New column for the photo -->
             <th>Action</th>
         </tr>
     </thead>
@@ -153,6 +154,7 @@
             <td>{{ search_result.Year }}</td>
             <td>{{ search_result.Gender }}</td>
             <td>{{ search_result.Status }}</td>
+            <td><img src="{{ search_result.imageURL }}" alt="Student Photo" width="50"></td> <!-- Display the photo -->
             <td>
                 <button onclick="openEditForm('{{ search_result.IDNumber }}', '{{ search_result.firstName }}', '{{ search_result.lastName }}', '{{ search_result.CourseCode }}', '{{ search_result.Year }}', '{{ search_result.Gender }}')">Edit</button>
                 <form action="/delete_student/{{ search_result.IDNumber }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
@@ -171,6 +173,7 @@
             <td>{{ student['Year'] }}</td>
             <td>{{ student['Gender'] }}</td>
             <td>{{ student['Status'] }}</td>
+            <td><img src="{{ student['imageURL'] }}" alt="Student Photo" width="50"></td> <!-- Display the photo -->
             <td>
                 <button onclick="openEditForm('{{ student['IDNumber'] }}', '{{ student['firstName'] }}', '{{ student['lastName'] }}', '{{ student['CourseCode'] }}', '{{ student['Year'] }}', '{{ student['Gender'] }}')">Edit</button>
                 <form action="/delete_student/{{ student['IDNumber'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">

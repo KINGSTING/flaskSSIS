@@ -58,6 +58,7 @@ def add_student():
         courseCode = request.form.get("courseCode")
         year = request.form.get("year")
         gender = request.form.get("gender")
+        file = request.files.get('file')  # Handle the file upload
 
         # Validate ID format
         if not Students.validate_id_format(idNumber):
@@ -69,23 +70,36 @@ def add_student():
             flash("Please fill out all the fields.", "error")
             return redirect(url_for('views.view_students'))
 
+        # Handle image upload
+        image_url = None
+        if file and file.filename != '':
+            try:
+                upload_result = cloudinary.uploader.upload(file)
+                image_url = upload_result.get('secure_url')
+            except Exception as e:
+                flash(f"An error occurred during image upload: {str(e)}", "error")
+                return redirect(url_for('views.view_students'))
+
         try:
             # Check if student ID already exists
             if Students.check_id_exists(conn, idNumber):
                 flash(f"Student with ID {idNumber} already exists!", "error")
             else:
-                # Add new student
-                new_student = Students(idNumber, firstName, lastName, courseCode, year, gender, "Enrolled")
-                new_student.save_student()  # Pass the connection to the save method
+                # Add new student with image URL
+                new_student = Students(idNumber, firstName, lastName, courseCode, year, gender, "Enrolled", image_url=image_url)
+                new_student.save_student(conn)  # Pass the connection to the save method
                 flash("Student added successfully!", "success")
+
                 # Check and update status if necessary
                 Students.check_and_update_status(conn, idNumber)
+
         except Exception as e:
             flash(f"An error occurred: {str(e)}", "error")
 
         return redirect(url_for('views.view_students'))  # Redirect after POST to prevent re-submission
 
-    return render_template('student.html')  # For GET request
+    return render_template('student.html')
+
 
 
 # Delete student
@@ -381,68 +395,30 @@ def search_student():
         flash("Invalid search field!", "danger")
         return redirect(url_for('views.view_students'))
 
-    # Determine whether to use LIKE or = based on the search field
-    if search_field == 'gender':
-        # Use exact match for gender
-        query = f"SELECT * FROM student WHERE {field_map[search_field]} = %s"
-    else:
-        # Use wildcard search for other fields
-        query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
-
-    params = [search_value] if search_field == 'gender' else [f"%{search_value}%"]  # No wildcards for gender
+    # Build the SQL query using LIKE for partial matches
+    query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
+    params = [f"%{search_value}%"]
 
     try:
-        # Establish a connection to the database
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)  # Enable dictionary cursor for named columns
-        cursor.execute(query, params)  # Execute the query with the search value
-        results = cursor.fetchall()  # Fetch all matching results
+        cursor.execute(query, params)
+        results = cursor.fetchall()
         cursor.close()
         conn.close()
     except Exception as e:
-        # Handle any errors that may occur during the database operation
         flash("An error occurred while searching: " + str(e), "danger")
         return redirect(url_for('views.view_students'))
 
-    # Check the number of results and render the appropriate template
     if len(results) == 1:
         # If exactly one result is found, render the page with that result
-        return render_template('student.html', search_result=results[0])  # Single result
+        return render_template('student.html', search_result=results[0])
     elif len(results) > 1:
         # If multiple results are found, render the page with a list of students
-        return render_template('student.html', students=results)  # Multiple results
+        return render_template('student.html', students=results)
     else:
         # If no results are found, flash a warning and redirect
         flash("No students found.", "warning")
         return redirect(url_for('views.view_students'))
 
 
-# Upload image
-@views.route('/upload_image', methods=['POST'])
-def upload_image():
-    # Check if a file was submitted
-    if 'file' not in request.files:
-        flash("No file part", "error")
-        return redirect(request.url)
-
-    file = request.files['file']
-
-    if file.filename == '':
-        flash("No selected file", "error")
-        return redirect(request.url)
-
-    if file:
-        try:
-            # Upload the image to Cloudinary
-            result = cloudinary.uploader.upload(file)
-
-            # Store the uploaded image URL in the database or wherever needed
-            image_url = result['secure_url']
-            flash("Image uploaded successfully!", "success")
-
-            # Optionally, redirect or render a page showing the uploaded image
-            return render_template('student.html', image_url=image_url)
-
-        except Exception as e:
-            flash(f"An error occurred during image upload: {str(e)}", "error")
-            return redirect(request.url)

@@ -1,6 +1,5 @@
 import mysql.connector
 from flask import Flask
-from os import path
 import cloudinary
 import cloudinary.uploader
 
@@ -70,6 +69,7 @@ def create_database(app):
                 Status VARCHAR(255) NOT NULL,
                 Year VARCHAR(255) NOT NULL,
                 Gender VARCHAR(255) NOT NULL,
+                imageURL VARCHAR(255),
                 FOREIGN KEY (CourseCode) REFERENCES program(programCode) ON DELETE SET NULL
             )
         ''')
