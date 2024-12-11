@@ -59,7 +59,7 @@ def create_database(app):
             )
         ''')
 
-        # Create the 'student' tablez
+        # Create the 'student' table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS student (
                 IDNumber VARCHAR(255) PRIMARY KEY,
@@ -70,7 +70,11 @@ def create_database(app):
                 Year VARCHAR(255) NOT NULL,
                 Gender VARCHAR(255) NOT NULL,
                 imageURL VARCHAR(255),
+<<<<<<< HEAD
                 FOREIGN KEY (CourseCode) REFERENCES program(programCode) ON DELETE SET NOT NULL
+=======
+                FOREIGN KEY (CourseCode) REFERENCES program(programCode) ON DELETE SET NULL
+>>>>>>> aef3c858a020a602c930d9e78b7ddc7c20bdc175
             )
         ''')
 
