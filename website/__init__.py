@@ -55,26 +55,21 @@ def create_database(app):
                 programCollege VARCHAR(255),
                 FOREIGN KEY (programCollege) REFERENCES college(collegeCode) 
                 ON DELETE CASCADE 
-                ON UPDATE CASCADE  -- Add ON UPDATE CASCADE here
+                ON UPDATE CASCADE
             )
         ''')
 
-        # Create the 'student' table
+        # Create the 'student' table without the foreign key constraint
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS student (
                 IDNumber VARCHAR(255) PRIMARY KEY,
                 firstName VARCHAR(255) NOT NULL,
                 lastName VARCHAR(255) NOT NULL,
-                CourseCode VARCHAR(255),  -- Nullable because of ON DELETE SET NULL
+                CourseCode VARCHAR(255),
                 Status VARCHAR(255) NOT NULL,
                 Year VARCHAR(255) NOT NULL,
                 Gender VARCHAR(255) NOT NULL,
-                imageURL VARCHAR(255),
-<<<<<<< HEAD
-                FOREIGN KEY (CourseCode) REFERENCES program(programCode) ON DELETE SET NOT NULL
-=======
-                FOREIGN KEY (CourseCode) REFERENCES program(programCode) ON DELETE SET NULL
->>>>>>> aef3c858a020a602c930d9e78b7ddc7c20bdc175
+                imageURL VARCHAR(255)
             )
         ''')
 
