@@ -395,9 +395,15 @@ def search_student():
         flash("Invalid search field!", "danger")
         return redirect(url_for('views.view_students'))
 
-    # Build the SQL query using LIKE for partial matches
-    query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
-    params = [f"%{search_value}%"]
+    # Build the SQL query for gender with length check and exact matching
+    if search_field == 'gender':
+        # Ensure the length of the search value matches the length of the gender field
+        query = f"SELECT * FROM student WHERE LENGTH({field_map[search_field]}) = LENGTH(TRIM(%s)) AND LOWER({field_map[search_field]}) = LOWER(TRIM(%s))"
+        params = [search_value, search_value]  # Use the search_value for both length and matching check
+    else:
+        # For other fields, use LIKE for partial matches
+        query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
+        params = [f"%{search_value}%"]
 
     try:
         conn = get_db_connection()
@@ -420,5 +426,6 @@ def search_student():
         # If no results are found, flash a warning and redirect
         flash("No students found.", "warning")
         return redirect(url_for('views.view_students'))
+
 
 

@@ -1,6 +1,12 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
+<<<<<<< HEAD
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="tk.*" />
+=======
     <inspection_tool class="HtmlUnknownAttribute" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="myValues">
         <value>
@@ -24,6 +30,7 @@
         <list>
           <option value="N806" />
           <option value="N802" />
+>>>>>>> aef3c858a020a602c930d9e78b7ddc7c20bdc175
         </list>
       </option>
     </inspection_tool>
