@@ -88,8 +88,8 @@ def get_db_connection():
         return mysql.connector.connect(
             host="localhost",
             user="root",
-            password="password",
-            database="mydb"
+            password="bltr1423",
+            database="schooldb"
         )
     except mysql.connector.Error as err:
         print(f"Error connecting to database: {err}")
