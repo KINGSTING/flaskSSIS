@@ -146,3 +146,48 @@ tr:hover {
     background-color: #d4edda;
     color: #155724;
 }
+
+.close {
+    background-color: red;
+    color: white; /* Ensures the text is visible against the red background */
+    border: none; /* Removes the border */
+    padding: 5px 10px; /* Adjust padding for a better button appearance */
+    font-size: 16px; /* Adjust font size if needed */
+    cursor: pointer; /* Changes the cursor to a pointer when hovering over the button */
+}
+
+.close:hover {
+    background-color: darkred; /* Changes the background color when hovered */
+}
+
+
+.pagination {
+    display: flex;
+    justify-content: center; /* Center the pagination */
+    list-style-type: none;  /* Remove default list styling */
+    padding: 0;             /* Remove padding */
+    margin: 1em 0;          /* Add some margin for spacing */
+}
+
+.pagination .page-item {
+    margin: 0 5px;          /* Add space between items */
+}
+
+.pagination .page-link {
+    display: block;
+    padding: 0.5em 0.75em;  /* Adjust padding for clickable links */
+    text-decoration: none;  /* Remove underline from links */
+    border: 1px solid #ddd; /* Add border */
+    border-radius: 4px;     /* Make edges rounded */
+    color: #007bff;         /* Set text color */
+}
+
+.pagination .page-link:hover {
+    background-color: #f0f0f0; /* Highlight on hover */
+}
+
+.pagination .active .page-link {
+    background-color: #007bff; /* Active link background */
+    color: white;              /* Active link text color */
+    border-color: #007bff;     /* Active link border */
+}

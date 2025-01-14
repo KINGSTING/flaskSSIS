@@ -18,14 +18,29 @@ def home():
 @views.route('/students', methods=['GET'])
 def view_students():
     db_connection = get_db_connection()
-    students = Students.get_all_students(db_connection)
 
-    for student in students:
-        student_id = student['IDNumber']
-        Students.check_and_update_status(db_connection, student_id)
+    # Pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 50  # Number of students per page
+    offset = (page - 1) * per_page
 
+    # Get the list of students with pagination
+    students = Students.get_all_students(db_connection, offset, per_page)
+
+    # Get all programs for the dropdown or selection
     programs = Programs.get_all_programs(db_connection)
-    return render_template('student.html', students=students, programs=programs)
+
+    # Get total number of students for pagination controls
+    cursor = db_connection.cursor()
+    cursor.execute('SELECT COUNT(*) FROM student')
+    total_students = cursor.fetchone()[0]
+    cursor.close()
+
+    # Calculate total number of pages
+    total_pages = (total_students // per_page) + (1 if total_students % per_page else 0)
+
+    # Render the template with paginated students, programs, and pagination info
+    return render_template('student.html', students=students, programs=programs, page=page, total_pages=total_pages)
 
 
 # Programs page
@@ -131,6 +146,18 @@ def edit_student(idNumber):
         new_year = request.form.get("year")
         new_gender = request.form.get("gender")
 
+        # Handle file upload (to Cloudinary)
+        file = request.files.get('file')
+        image_url = None  # Default value if no image is uploaded
+
+        if file and file.filename != '':
+            try:
+                upload_result = cloudinary.uploader.upload(file)
+                image_url = upload_result.get('secure_url')  # Get the secure URL from Cloudinary
+            except Exception as e:
+                flash(f"An error occurred during image upload: {str(e)}", "error")
+                return redirect(url_for('views.view_students'))  # Redirect on error
+
         # Find the student by the original ID
         student = Students.find_by_id(conn, idNumber)
 
@@ -144,10 +171,16 @@ def edit_student(idNumber):
 
             # Proceed with the update using SQL
             cursor = conn.cursor()  # Create a cursor object
-            cursor.execute("""UPDATE student 
-                              SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s 
-                              WHERE IDNumber = %s""",
-                           (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, idNumber))
+            if image_url:  # Update the image URL if a new image was uploaded
+                cursor.execute("""UPDATE student 
+                                  SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s, imageURL = %s 
+                                  WHERE IDNumber = %s""",
+                               (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, image_url, idNumber))
+            else:
+                cursor.execute("""UPDATE student 
+                                  SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s 
+                                  WHERE IDNumber = %s""",
+                               (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, idNumber))
             conn.commit()
             cursor.close()  # Close the cursor
 

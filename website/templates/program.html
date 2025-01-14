@@ -35,7 +35,7 @@
 
 <div id="formModal" class="modal hidden">
     <div class="modal-content">
-        <span class="close" onclick="toggleForm('', '', '')">&times;</span>
+        <button class="close" onclick="toggleForm()">X</button>
         <form id="program-form" action="/add_program" method="post" onsubmit="return confirmUpdate();">
             <input type="hidden" id="originalProgramCode" name="originalProgramCode" value="">
             <label for="courseCode">Course Code:</label><br>
@@ -49,7 +49,8 @@
                 {% for college in colleges %}
                 <option value="{{ college['collegeCode'] }}">{{ college['collegeCode'] }} - {{ college['collegeName'] }}</option>
                 {% endfor %}
-            </select><br>
+            </select>
+            <br><br>
 
             <button type="submit" id="submitBtn">Submit</button>
         </form>

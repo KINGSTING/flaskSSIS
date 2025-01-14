@@ -24,9 +24,10 @@ class Students:
             conn.commit()
 
     @staticmethod
-    def get_all_students(db_connection):
+    def get_all_students(db_connection, offset, per_page):
         cursor = db_connection.cursor(dictionary=True)  # Use dictionary cursor
-        cursor.execute('SELECT * FROM student')  # Correct table name
+        cursor.execute('SELECT * FROM student LIMIT %s OFFSET %s',
+                       (per_page, offset))  # Add LIMIT and OFFSET for pagination
         students = cursor.fetchall()
         cursor.close()
         return students
