@@ -169,13 +169,13 @@
 <!-- Pagination Controls -->
 <div class="pagination">
     {% if page and page > 1 %}
-        <a href="{{ url_for('views.view_students', page=1) }}"> <{ </a>
-        <a href="{{ url_for('views.view_students', page=page - 1) }}"> < </a>
+        <a href="{{ url_for('sbp.view_students', page=1) }}"> <{ </a>
+        <a href="{{ url_for('sbp.view_students', page=page - 1) }}"> < </a>
     {% endif %}
     <span>Page {{ page if page else 'unknown' }} of {{ total_pages if total_pages else 'unknown' }}</span>
     {% if page and total_pages and page < total_pages %}
-        <a href="{{ url_for('views.view_students', page=page + 1) }}"> > </a>
-        <a href="{{ url_for('views.view_students', page=total_pages) }}"> }> </a>
+        <a href="{{ url_for('sbp.view_students', page=page + 1) }}"> > </a>
+        <a href="{{ url_for('sbp.view_students', page=total_pages) }}"> }> </a>
     {% endif %}
 </div>
 

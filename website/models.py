@@ -1,6 +1,6 @@
 import re
 import mysql.connector
-from . import get_db_connection
+from website import get_db_connection
 
 
 class Students:

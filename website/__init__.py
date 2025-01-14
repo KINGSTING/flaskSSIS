@@ -1,27 +1,32 @@
 import mysql.connector
 from flask import Flask
+from dotenv import load_dotenv
+import os
 import cloudinary
 import cloudinary.uploader
 
-DB_NAME = "mydb"  # Name of your MySQL database
+DB_NAME = "mydb"
 
 
 def create_app():
+    load_dotenv()
     app = Flask(__name__)
     app.config['SECRET_KEY'] = "helloworld"
 
-    # Configure Cloudinary
+    # Cloudinary
     cloudinary.config(
-        cloud_name='dzn6wdijk',  # Your Cloudinary Cloud Name
-        api_key='872366418514214',  # Your Cloudinary API Key
-        api_secret='q6DG-UPeMdJllbj3C-ZSmn-33fY'  # Your Cloudinary API Secret
+        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+        api_key=os.getenv('CLOUDINARY_API_KEY'),
+        api_secret=os.getenv('CLOUDINARY_API_SECRET')
     )
 
-    from .views import views
-    # from .auth import auth
+    from website.routes.student import sbp
+    from website.routes.program import pbp
+    from website.routes.college import cbp
 
-    app.register_blueprint(views, url_prefix="/")
-    # app.register_blueprint(auth, url_prefix="/")
+    app.register_blueprint(sbp, url_prefix="/")
+    app.register_blueprint(pbp, url_prefix="/")
+    app.register_blueprint(cbp, url_prefix="/")
 
     create_database(app)
 
