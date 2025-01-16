@@ -76,7 +76,7 @@
             <td>
                 <button onclick="toggleForm('{{ search_result['programCode'] }}', '{{ search_result['programTitle'] }}', '{{ search_result['programCollege'] }}')">Edit</button>
                 <form action="/delete_program/{{ search_result['programCode'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
-                    <button type="submit">Delete</button>
+                    <button id="delete_button" type="submit">Delete</button>
                 </form>
             </td>
         </tr>

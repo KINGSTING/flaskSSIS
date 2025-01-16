@@ -5,15 +5,13 @@ import os
 import cloudinary
 import cloudinary.uploader
 
-DB_NAME = "mydb"
-
 
 def create_app():
-    load_dotenv()
+    load_dotenv()  # Load environment variables from .env
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = "helloworld"
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
-    # Cloudinary
+    # Cloudinary configuration
     cloudinary.config(
         cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
         api_key=os.getenv('CLOUDINARY_API_KEY'),
@@ -28,19 +26,19 @@ def create_app():
     app.register_blueprint(pbp, url_prefix="/")
     app.register_blueprint(cbp, url_prefix="/")
 
-    create_database(app)
+    create_database()
 
     return app
 
 
-def create_database(app):
+def create_database():
     try:
-        # Connect to MySQL database
+        # Use environment variables for database configuration
         conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="password",
-            database=DB_NAME
+            host=os.getenv('DB_HOST'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            database=os.getenv('DB_NAME')
         )
         cursor = conn.cursor()
 
@@ -89,11 +87,12 @@ def create_database(app):
 
 def get_db_connection():
     try:
+        # Use environment variables for database connection
         return mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="bltr1423",
-            database="schooldb"
+            host=os.getenv('DB_HOST'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            database=os.getenv('DB_NAME')
         )
     except mysql.connector.Error as err:
         print(f"Error connecting to database: {err}")

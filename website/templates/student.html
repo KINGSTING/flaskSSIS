@@ -158,7 +158,7 @@
             <td>
                 <button onclick="openEditForm('{{ student['IDNumber'] }}', '{{ student['firstName'] }}', '{{ student['lastName'] }}', '{{ student['CourseCode'] }}', '{{ student['Year'] }}', '{{ student['Gender'] }}')">Edit</button>
                 <form action="/delete_student/{{ student['IDNumber'] }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
-                    <button type="submit">Delete</button>
+                    <button id="delete-button" type="submit">Delete</button>
                 </form>
             </td>
         </tr>

@@ -191,3 +191,7 @@ tr:hover {
     color: white;              /* Active link text color */
     border-color: #007bff;     /* Active link border */
 }
+#delete-button {
+    background-color: maroon;
+    color: white;
+}

@@ -97,6 +97,9 @@ def search_program():
     query = f"SELECT * FROM program WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
     params = [f"%{search_value}%"]  # Use wildcard search
 
+    print(query)
+    print(params)
+
     try:
         # Establish a connection to the database
         conn = get_db_connection()
@@ -120,4 +123,4 @@ def search_program():
     else:
         # If no results are found, flash a warning and redirect
         flash("No programs found.", "warning")
-        return redirect(url_for('pbp.program_page'))
+        return redirect(url_for('pbp.add_program'))

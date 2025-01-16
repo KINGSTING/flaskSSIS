@@ -189,7 +189,7 @@ def search_student():
     search_field = request.args.get('searchField')
     search_value = request.args.get('searchValue')
 
-    # Define a mapping of allowed search fields to actual database columns
+    # Mapping of allowed search fields to database columns
     field_map = {
         'idNumber': 'IDNumber',
         'firstName': 'firstName',
@@ -200,39 +200,53 @@ def search_student():
         'status': 'Status'
     }
 
-    # If the search field is invalid, flash an error and redirect
+    # Validate the search field
     if search_field not in field_map:
         flash("Invalid search field!", "danger")
         return redirect(url_for('sbp.view_students'))
 
-    # Build the SQL query for gender with length check and exact matching
-    if search_field == 'gender':
-        # Ensure the length of the search value matches the length of the gender field
-        query = f"SELECT * FROM student WHERE LENGTH({field_map[search_field]}) = LENGTH(TRIM(%s)) AND LOWER({field_map[search_field]}) = LOWER(TRIM(%s))"
-        params = [search_value, search_value]  # Use the search_value for both length and matching check
-    else:
-        # For other fields, use LIKE for partial matches
+    # Adjust the query for the specific field
+    if search_field == 'idNumber':
+        # Use exact match for idNumber
         query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
-        params = [f"%{search_value}%"]
+        params = [search_value.strip()]  # Trim input value to avoid mismatches
+    elif search_field == 'gender':
+        # Gender-specific query for length and exact match
+        query = f"""
+            SELECT * FROM student 
+            WHERE LENGTH({field_map[search_field]}) = LENGTH(TRIM(%s)) 
+            AND LOWER({field_map[search_field]}) = LOWER(TRIM(%s))
+        """
+        params = [search_value.strip(), search_value.strip()]
+    else:
+        # Use partial match for other fields
+        query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
+        params = [f"%{search_value.strip()}%"]
+
+    # Debugging logs
+    print("Search Field:", search_field)
+    print("Search Value:", search_value.strip())
+    print("Executing Query:", query)
+    print("With Parameters:", params)
 
     try:
+        # Execute the query
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)  # Enable dictionary cursor for named columns
+        cursor = conn.cursor(dictionary=True)  # Use a dictionary cursor
         cursor.execute(query, params)
         results = cursor.fetchall()
         cursor.close()
         conn.close()
+
     except Exception as e:
+        # Handle database errors gracefully
         flash("An error occurred while searching: " + str(e), "danger")
         return redirect(url_for('sbp.view_students'))
 
-    if len(results) == 1:
-        # If exactly one result is found, render the page with that result
-        return render_template('student.html', search_result=results[0])
-    elif len(results) > 1:
-        # If multiple results are found, render the page with a list of students
+    # Render results based on the number of matches
+    if results:  # Check if there are any results
         return render_template('student.html', students=results)
     else:
-        # If no results are found, flash a warning and redirect
         flash("No students found.", "warning")
         return redirect(url_for('sbp.view_students'))
+

@@ -74,7 +74,7 @@
                         <td>
                             <button onclick="toggleForm('{{ college['collegeCode'] }}', '{{ college['collegeName'] }}')">Edit</button>
                             <form action="{{ url_for('cbp.delete_college', collegeCode=college['collegeCode']) }}" method="post" style="display:inline;" onsubmit="return confirmDelete();">
-                                <button type="submit">Delete</button>
+                                <button id="delete_button" type="submit">Delete</button>
                             </form>
                         </td>
                     </tr>
