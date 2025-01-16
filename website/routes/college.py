@@ -77,33 +77,37 @@ def search_college():
     search_field = request.args.get('searchField')
     search_value = request.args.get('searchValue')
 
+    # Define a mapping of allowed search fields to actual database columns
     field_map = {
         'collegeCode': 'collegeCode',
-        'collegeName': 'collegeName'
+        'collegeName': 'collegeName',
     }
 
+    # If the search field is invalid, flash an error and redirect
     if search_field not in field_map:
         flash("Invalid search field!", "danger")
-        return redirect(url_for('cbp.college_page'))
-
-    query = f"SELECT * FROM college WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
-    params = [f"%{search_value}%"]
+        return redirect(url_for('cbp.college_page'))  # Adjust the redirect URL to your college page
 
     try:
+        # Establish a connection to the database
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)  # Enable dictionary cursor
-        cursor.execute(query, params)
-        results = cursor.fetchall()
-        cursor.close()
-        conn.close()
+        # Use the search function from the College model
+        results = Colleges.search_college_by_field(conn, search_field, search_value)
+        conn.close()  # Ensure the connection is closed after the query
+
     except Exception as e:
+        # Handle any errors that may occur during the database operation
         flash("An error occurred while searching: " + str(e), "danger")
         return redirect(url_for('cbp.college_page'))
 
+    # Check the number of results and render the appropriate template
     if len(results) == 1:
+        # If exactly one result is found, render the page with that result
         return render_template('college.html', search_result=results[0])  # Single result
     elif len(results) > 1:
+        # If multiple results are found, render the page with a list of colleges
         return render_template('college.html', colleges=results)  # Multiple results
     else:
+        # If no results are found, flash a warning and redirect
         flash("No colleges found.", "warning")
-        return redirect(url_for('cbp.college_page'))
+        return redirect(url_for('cbp.add_college'))  # Adjust the redirect URL to the page for adding a college

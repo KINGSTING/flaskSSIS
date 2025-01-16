@@ -13,6 +13,7 @@ class Students:
         self.gender = gender
         self.status = status
         self.image_url = image_url  # New field for the image URL
+        self.db = get_db_connection()
 
     def save_student(self, conn):
         with conn.cursor() as cursor:
@@ -59,26 +60,41 @@ class Students:
         pattern = r'^\d{4}-\d{4}$'
         return re.match(pattern, idNumber) is not None
 
-    def delete_student(self):
-        cursor = self.db.cursor()
+    def delete_student(self, conn):
+        cursor = conn.cursor()
         cursor.execute('DELETE FROM student WHERE IDNumber = %s', (self.idNumber,))
-        self.db.commit()
+        conn.commit()
         cursor.close()
 
     @staticmethod
     def find_by_id(db_connection, idNumber):
-        cursor = db_connection.cursor(dictionary=True)  # Use dictionary cursor
-        cursor.execute("SELECT * FROM student WHERE IDNumber = %s", (idNumber,))
-        row = cursor.fetchone()
-        cursor.close()
+        try:
+            cursor = db_connection.cursor()
+            cursor.execute("SELECT * FROM student WHERE IDNumber = %s", (idNumber,))
+            row = cursor.fetchone()
+            cursor.close()
 
-        if row:
-            return row  # Return the dictionary directly
-        return None
+            if row:
+                # Assuming the order of columns in the "student" table:
+                # (idNumber, firstName, lastName, courseCode, year, gender, status, image_url)
+                return Students(
+                    idNumber=row[0],
+                    firstName=row[1],
+                    lastName=row[2],
+                    courseCode=row[3],
+                    year=row[4],
+                    gender=row[5],
+                    status=row[6],
+                    image_url=row[7] if len(row) > 7 else None
+                )
+            print("No matching student found.")
+            return None
+        except Exception as e:
+            print(f"Error in find_by_id: {e}")
+            return None
 
     @staticmethod
     def check_and_update_status(conn, idNumber):
-        print(f"Checking status for student ID: {idNumber}")
 
         # Ensure the connection and cursor are valid
         cursor = conn.cursor(dictionary=True)
@@ -90,22 +106,18 @@ class Students:
 
             if student:  # Check if a student record was found
                 course_code = student['CourseCode']
-                print(f"Found course code for student {idNumber}: {course_code}")
 
                 # Check if the program exists
                 cursor.execute("SELECT * FROM program WHERE programCode = %s", (course_code,))
                 program_exists = cursor.fetchone()
 
                 if not program_exists:  # If no program found, update status to 'Unenrolled'
-                    print(f"Program code {course_code} does not exist. Updating status to 'Unenrolled'.")
                     cursor.execute("UPDATE student SET Status = 'Unenrolled' WHERE IDNumber = %s", (idNumber,))
                     conn.commit()
-                    print(f"Student ID {idNumber} status updated to 'Unenrolled'.")
                 else:  # If program exists, update status to 'Enrolled'
-                    print(f"Program code {course_code} exists. Updating status to 'Enrolled'.")
                     cursor.execute("UPDATE student SET Status = 'Enrolled' WHERE IDNumber = %s", (idNumber,))
                     conn.commit()
-                    print(f"Student ID {idNumber} status updated to 'Enrolled'.")
+
             else:
                 print(f"Student ID {idNumber} not found.")
 
@@ -114,6 +126,100 @@ class Students:
         finally:
             # Close the cursor after the operation
             cursor.close()
+
+    @staticmethod
+    def get_student_count(db_connection):
+        try:
+            cursor = db_connection.cursor()
+            cursor.execute("SELECT COUNT(*) FROM student")
+            count = cursor.fetchone()[0]  # Fetch the first value of the result tuple
+            cursor.close()
+            return count
+        except mysql.connector.Error as err:
+            print(f"Error fetching student count: {err}")
+            return None
+
+    @staticmethod
+    def update_student_info(db_connection, new_idNumber, new_firstName, new_lastName, new_courseCode, new_year,
+                            new_gender, new_image_url=None, current_idNumber=None):
+        with db_connection.cursor() as cursor:
+            sql = """
+                UPDATE student 
+                SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s, imageURL = %s 
+                WHERE IDNumber = %s
+            """
+            # Use the provided current_idNumber (which is the original ID number of the student)
+            cursor.execute(sql, (
+                new_idNumber,
+                new_firstName,
+                new_lastName,
+                new_courseCode,
+                new_year,
+                new_gender,
+                new_image_url,
+                current_idNumber  # Existing IDNumber of the student
+            ))
+            db_connection.commit()
+
+    @staticmethod
+    def search_student_by_id(db_connection, id_number):
+        query = "SELECT * FROM student WHERE LOWER(IDNumber) LIKE LOWER(%s)"
+        try:
+            with db_connection.cursor(dictionary=True) as cursor:
+                cursor.execute(query, (id_number.strip(),))  # Ensure parameter is a tuple (id_number,)
+                result = cursor.fetchone()  # Fetch a single record or None
+            return result  # Return the student record or None if not found
+        except Exception as e:
+            print(f"Error while searching for student by ID: {e}")
+            return None
+
+    @staticmethod
+    def search_student_by_gender(conn, gender):
+
+        query = """
+               SELECT * FROM student 
+               WHERE LENGTH(Gender) = LENGTH(TRIM(%s)) 
+               AND LOWER(Gender) = LOWER(TRIM(%s))
+           """
+        try:
+            with conn.cursor(dictionary=True) as cursor:
+                cursor.execute(query, (gender.strip(), gender.strip()))
+                results = cursor.fetchall()
+            return results
+        except Exception as e:
+            print(f"Error searching for students by gender: {e}")
+            return []
+
+    @staticmethod
+    def search_student_by_field(db_connection, search_field, search_value):
+        # Mapping of allowed search fields to database columns
+        field_map = {
+            'idNumber': 'IDNumber',
+            'firstName': 'firstName',
+            'lastName': 'lastName',
+            'course': 'CourseCode',
+            'yearLevel': 'Year',
+            'gender': 'Gender',
+            'status': 'Status'
+        }
+
+        # Validate the search field
+        if search_field not in field_map:
+            raise ValueError(f"Invalid search field: {search_field}")
+
+        # Prepare the SQL query for partial match using LIKE
+        query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
+
+        try:
+            with db_connection.cursor(dictionary=True) as cursor:
+                # Parameterized query to prevent SQL injection
+                cursor.execute(query, (f"%{search_value.strip()}%",))  # Using % for partial match
+                results = cursor.fetchall()  # Fetch all matching records
+            return results  # Return the list of students found, or empty list if no match
+        except Exception as e:
+            print(f"Error while searching for student by {search_field}: {e}")
+            return []  # Return an empty list in case of any errors
+
 
 
 class Programs:
@@ -149,6 +255,36 @@ class Programs:
         if row:
             return Programs(row[0], row[1], row[2])
         return None
+
+    @staticmethod
+    def search_program_by_field(db_connection, search_field, search_value):
+        # Validate input
+        if not search_value or not search_field:
+            raise ValueError("Search field and value must be provided.")
+
+        # Mapping of allowed search fields to database columns
+        field_map = {
+            'programCode': 'programCode',
+            'programTitle': 'programTitle',
+            'programCollege': 'programCollege'
+        }
+
+        # Validate the search field
+        if search_field not in field_map:
+            raise ValueError(f"Invalid search field: {search_field}")
+
+        # Prepare the SQL query for partial match using LIKE
+        query = f"SELECT * FROM program WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
+
+        try:
+            with db_connection.cursor(dictionary=True) as cursor:
+                # Parameterized query to prevent SQL injection
+                cursor.execute(query, (f"%{search_value.strip()}%",))  # Using % for partial match
+                results = cursor.fetchall()  # Fetch all matching records
+            return results  # Return the list of programs found, or empty list if no match
+        except Exception as e:
+            print(f"Error while searching for program by {search_field}: {e}")
+            return []  # Return an empty list in case of any errors
 
     def update_program(self, conn, new_programCode, new_programTitle, new_collegeCode):
         cursor = conn.cursor()
@@ -237,6 +373,35 @@ class Colleges:
         if row:
             return Colleges(row[0], row[1])
         return None
+
+    @staticmethod
+    def search_college_by_field(db_connection, search_field, search_value):
+        # Validate input
+        if not search_value or not search_field:
+            raise ValueError("Search field and value must be provided.")
+
+        # Mapping of allowed search fields to database columns
+        field_map = {
+            'collegeCode': 'collegeCode',
+            'collegeName': 'collegeName',
+        }
+
+        # Validate the search field
+        if search_field not in field_map:
+            raise ValueError(f"Invalid search field: {search_field}")
+
+        # Prepare the SQL query for partial match using LIKE
+        query = f"SELECT * FROM college WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
+
+        try:
+            with db_connection.cursor(dictionary=True) as cursor:
+                # Parameterized query to prevent SQL injection
+                cursor.execute(query, (f"%{search_value.strip()}%",))  # Using % for partial match
+                results = cursor.fetchall()  # Fetch all matching records
+            return results  # Return the list of colleges found, or empty list if no match
+        except Exception as e:
+            print(f"Error while searching for college by {search_field}: {e}")
+            return []  # Return an empty list in case of any errors
 
     @staticmethod
     def update_college(conn, new_college_code, new_college_name):

@@ -11,8 +11,6 @@ sbp = Blueprint("sbp", __name__)
 @sbp.route("/home")
 def home():
     return render_template("home.html")
-
-
 # Students page
 @sbp.route('/students', methods=['GET'])
 def view_students():
@@ -34,16 +32,14 @@ def view_students():
     programs = Programs.get_all_programs(db_connection)
 
     # Get total number of students for pagination controls
-    cursor = db_connection.cursor()
-    cursor.execute('SELECT COUNT(*) FROM student')
-    total_students = cursor.fetchone()[0]
-    cursor.close()
+    total_students = Students.get_student_count(db_connection)
 
     # Calculate total number of pages
     total_pages = (total_students // per_page) + (1 if total_students % per_page else 0)
 
     # Render the template with paginated students, programs, and pagination info
     return render_template('student.html', students=students, programs=programs, page=page, total_pages=total_pages)
+
 
 # Add student
 @sbp.route('/add_student', methods=['GET', 'POST'])
@@ -104,23 +100,26 @@ def add_student():
 @sbp.route('/delete_student/<idNumber>', methods=['POST'])
 def delete_student(idNumber):
     conn = get_db_connection()
-    cursor = conn.cursor()  # Create a cursor object
+
+    # Use the Students class to find the student
     student = Students.find_by_id(conn, idNumber)
+
     if student:
-        student.delete_student(conn)  # Make sure this method uses the cursor if needed
-        conn.commit()  # Commit the changes
-    cursor.close()  # Close the cursor
-    conn.close()  # Close the connection
+        print(f"Student found: {student.firstName} {student.lastName} (ID: {student.idNumber})")
+        student.delete_student(conn)  # Proceed with deletion
+    else:
+        print("Student not found. Cannot delete.")
+
+    conn.close()
     return redirect(url_for('sbp.view_students'))
 
 
-# Edit student
+
 @sbp.route('/edit_student/<idNumber>', methods=['GET', 'POST'])
 def edit_student(idNumber):
-    conn = get_db_connection()
+    conn = get_db_connection()  # Ensure this is a connection object
 
     if request.method == 'POST':
-        # Get updated data from the form
         new_idNumber = request.form.get("idNumber")
         new_firstName = request.form.get("firstName")
         new_lastName = request.form.get("lastName")
@@ -128,64 +127,50 @@ def edit_student(idNumber):
         new_year = request.form.get("year")
         new_gender = request.form.get("gender")
 
-        # Handle file upload (to Cloudinary)
+        # Handle file upload
         file = request.files.get('file')
-        image_url = None  # Default value if no image is uploaded
-
+        image_url = None
         if file and file.filename != '':
             try:
                 upload_result = cloudinary.uploader.upload(file)
-                image_url = upload_result.get('secure_url')  # Get the secure URL from Cloudinary
+                image_url = upload_result.get('secure_url')
             except Exception as e:
                 flash(f"An error occurred during image upload: {str(e)}", "error")
-                return redirect(url_for('sbp.view_students'))  # Redirect on error
+                return redirect(url_for('sbp.view_students'))
 
-        # Find the student by the original ID
         student = Students.find_by_id(conn, idNumber)
 
         if student:
-            # Check if the new ID number already exists (and it's not the current student)
             existing_student = Students.find_by_id(conn, new_idNumber)
             if existing_student and existing_student['IDNumber'] != idNumber:
-                # If the new ID is already in use by another student, flash an error message
                 flash(f"ID Number {new_idNumber} is already in use.", "error")
-                return redirect(url_for('sbp.edit_student', idNumber=idNumber))  # Reload the edit page
+                return redirect(url_for('sbp.edit_student', idNumber=idNumber))
 
-            # Proceed with the update using SQL
-            cursor = conn.cursor()  # Create a cursor object
-            if image_url:  # Update the image URL if a new image was uploaded
-                cursor.execute("""UPDATE student 
-                                  SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s, imageURL = %s 
-                                  WHERE IDNumber = %s""",
-                               (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, image_url, idNumber))
+            # Ensure conn is passed as a connection object to the update function
+            if image_url:
+                Students.update_student_info(conn,new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, image_url, idNumber)
             else:
-                cursor.execute("""UPDATE student 
-                                  SET IDNumber = %s, firstName = %s, lastName = %s, CourseCode = %s, Year = %s, Gender = %s 
-                                  WHERE IDNumber = %s""",
-                               (new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, idNumber))
-            conn.commit()
-            cursor.close()  # Close the cursor
+                Students.update_student_info(conn,new_idNumber, new_firstName, new_lastName, new_courseCode, new_year, new_gender, idNumber)
 
-            # Check and update status if necessary
             Students.check_and_update_status(conn, new_idNumber)
-
-            # Flash success message
             flash(f"Student ID {new_idNumber} has been updated successfully!", "success")
-            conn.close()
-            return redirect(url_for('sbp.view_students'))  # Redirect to the view page after update
+            conn.close()  # Close connection at the end
+            return redirect(url_for('sbp.view_students'))
         else:
-            # If the student is not found, flash an error
             flash(f"Student with ID {idNumber} not found.", "error")
+            conn.close()
+            return redirect(url_for('sbp.view_students'))
 
-    # If GET request, load the form with current student data
     student = Students.find_by_id(conn, idNumber)
     conn.close()
 
     return render_template('edit_student.html', student=student)
 
 
+
 @sbp.route('/search_student', methods=['GET'])
 def search_student():
+    conn = get_db_connection()
     search_field = request.args.get('searchField')
     search_value = request.args.get('searchValue')
 
@@ -205,46 +190,25 @@ def search_student():
         flash("Invalid search field!", "danger")
         return redirect(url_for('sbp.view_students'))
 
-    # Adjust the query for the specific field
+    # Perform the search based on the field
     if search_field == 'idNumber':
-        # Use exact match for idNumber
-        query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
-        params = [search_value.strip()]  # Trim input value to avoid mismatches
+        # Search for students by ID number (exact match)
+        result = Students.search_student_by_id(conn, search_value.strip())
+        results = [result] if result else []  # Wrap result in a list if found, else empty list
     elif search_field == 'gender':
-        # Gender-specific query for length and exact match
-        query = f"""
-            SELECT * FROM student 
-            WHERE LENGTH({field_map[search_field]}) = LENGTH(TRIM(%s)) 
-            AND LOWER({field_map[search_field]}) = LOWER(TRIM(%s))
-        """
-        params = [search_value.strip(), search_value.strip()]
+        # Search for students by gender with exact matching
+        results = Students.search_student_by_gender(conn, search_value.strip())
     else:
-        # Use partial match for other fields
-        query = f"SELECT * FROM student WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
-        params = [f"%{search_value.strip()}%"]
+        # Search for students using partial match for other fields
+        results = Students.search_student_by_field(conn, search_field, search_value.strip())
 
     # Debugging logs
     print("Search Field:", search_field)
     print("Search Value:", search_value.strip())
-    print("Executing Query:", query)
-    print("With Parameters:", params)
+    print("Search Results:", results)
 
-    try:
-        # Execute the query
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)  # Use a dictionary cursor
-        cursor.execute(query, params)
-        results = cursor.fetchall()
-        cursor.close()
-        conn.close()
-
-    except Exception as e:
-        # Handle database errors gracefully
-        flash("An error occurred while searching: " + str(e), "danger")
-        return redirect(url_for('sbp.view_students'))
-
-    # Render results based on the number of matches
-    if results:  # Check if there are any results
+    # Handle case if no results were found
+    if results:
         return render_template('student.html', students=results)
     else:
         flash("No students found.", "warning")

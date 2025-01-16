@@ -93,34 +93,26 @@ def search_program():
         flash("Invalid search field!", "danger")
         return redirect(url_for('pbp.program_page'))
 
-    # Build the SQL query dynamically based on the search field
-    query = f"SELECT * FROM program WHERE LOWER({field_map[search_field]}) LIKE LOWER(%s)"
-    params = [f"%{search_value}%"]  # Use wildcard search
-
-    print(query)
-    print(params)
+    # Establish a connection to the database
+    conn = get_db_connection()
 
     try:
-        # Establish a connection to the database
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)  # Enable dictionary cursor for named columns
-        cursor.execute(query, params)  # Execute the query with the search value
-        results = cursor.fetchall()  # Fetch all matching results
-        cursor.close()
-        conn.close()
+        # Build the query and fetch the results
+        results = Programs.search_program_by_field(conn, search_field, search_value)
+
+        # Check if there are any results and render the appropriate template
+        if len(results) == 1:
+            # If exactly one result is found, render the page with that result
+            return render_template('program.html', search_result=results[0])  # Single result
+        elif len(results) > 1:
+            # If multiple results are found, render the page with a list of programs
+            return render_template('program.html', programs=results)  # Multiple results
+        else:
+            # If no results are found, flash a warning and redirect
+            flash("No programs found.", "warning")
+            return redirect(url_for('pbp.add_program'))
+
     except Exception as e:
         # Handle any errors that may occur during the database operation
         flash("An error occurred while searching: " + str(e), "danger")
-        return redirect(url_for('pbp.program_page'))
-
-    # Check the number of results and render the appropriate template
-    if len(results) == 1:
-        # If exactly one result is found, render the page with that result
-        return render_template('program.html', search_result=results[0])  # Single result
-    elif len(results) > 1:
-        # If multiple results are found, render the page with a list of programs
-        return render_template('program.html', programs=results)  # Multiple results
-    else:
-        # If no results are found, flash a warning and redirect
-        flash("No programs found.", "warning")
         return redirect(url_for('pbp.add_program'))
